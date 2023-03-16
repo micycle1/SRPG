@@ -1,16 +1,14 @@
 package micycle.srpg;
 
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.random.RandomGenerator;
 
 /**
- * SRPolygonGenerator - Super Random Polygon Generator
+ * SRPG - Super Random Polygon Generator
  * <p>
- * SRPolygonGenerator generates simply-connected and multiply-connected polygons
+ * SRPG generates simply-connected and multiply-connected polygons
  * by means of a regular grid that consists of square cells. Given two integer
  * values, a and b, SRPolygonGenerator generates a grid of size a times b.
  * <P>
@@ -41,48 +39,6 @@ public class SRPolygonGenerator {
 
 	private static final int NIL = -1;
 
-	private static class Coord {
-		double x;
-		double y;
-
-		public Coord(double x, double y) {
-			this.x = x;
-			this.y = y;
-		}
-
-	}
-
-	private static class EdgeNode {
-		int i1;
-		int j1;
-		int i2;
-		int j2;
-		boolean vis;
-
-		public EdgeNode(int i1, int j1, int i2, int j2, boolean vis) {
-			this.i1 = i1;
-			this.j1 = j1;
-			this.i2 = i2;
-			this.j2 = j2;
-			this.vis = vis;
-		}
-
-		public EdgeNode() {
-		}
-
-	}
-
-	private static class VertexNode {
-		int i1;
-		int j1;
-
-		public VertexNode(int i1, int j1) {
-			this.i1 = i1;
-			this.j1 = j1;
-		}
-
-	}
-
 	private boolean[][] full = null;
 	private boolean[][] keep = null;
 	private int N = 0;
@@ -102,947 +58,13 @@ public class SRPolygonGenerator {
 	private int num_vertices = 0;
 	private int max_num_vertices = 0;
 
-//	long state = 1337;
-//	int xorshift() {
-//		int x = (int)state;
-//		x ^= x << 13;
-//		x ^= x >> 17;
-//		x ^= x << 5;
-//		x = Math.abs(x);
-//		state = x;
-//		return x;
-//	}
-//	int xorshift() {
-//	    state ^= (state << 21);
-//	    state ^= (state >> 35);
-//	    state ^= (state << 4);
-//	    return (int) (Math.abs(state) % 2147483647);
-//	}
-
-	private int uniformRandom(int m) {
-
-		return rand.nextInt() % m;
-//		return rand.nextInt(m);
-	}
-
-	private int convert(int i, int j) {
-		return i * N_y + j;
-	}
-
-	private int invert(int k, int i) {
-		i = k / N_y; // TODO has side effects / should mutate?
-		return k - i * N_y;
-	}
-
-	private double det2D(VertexNode u, VertexNode v, VertexNode w) {
-		return (((u).i1 - (v).i1) * ((v).j1 - (w).j1) + ((v).j1 - (u).j1) * ((v).i1 - (w).i1));
-	}
-
-//	@Deprecated
-//	private void swap(VertexNode i1, VertexNode i2, VertexNode i) { // TODO does not work in java -- replace?!
-//		i = i1;
-//		i1 = i2;
-//		i2 = i;
-//	}
-
-	private void swap(VertexNode[] vertices, int i, int j) {
-		// TODO replace inline swap with this (once confirmed working)
-		VertexNode temp = vertices[i];
-		vertices[i] = vertices[j];
-		vertices[j] = temp;
-	}
-
-	private void setTop(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
-		top[I][J] = W;
-	}
-
-	private void setBot(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
-		bot[I][J] = W;
-	}
-
-	private void setLft(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
-		lft[I][J] = W;
-	}
-
-	private void setRgt(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
-		rgt[I][J] = W;
-	}
-
-	private boolean isTopFull(int I, int J) {
-		return top[I][J];
-	}
-
-	private boolean IsBotFull(int i, int j) {
-		return bot[i][j];
-	}
-
-	private boolean IsLftFull(int i, int j) {
-		return lft[i][j];
-	}
-
-	private boolean IsRgtFull(int i, int j) {
-		return rgt[i][j];
-	}
-
-	private int GetStartI(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
-		return edges[i][j].i1;
-	}
-
-	private int GetStartJ(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
-		return edges[i][j].j1;
-	}
-
-	private int GetEndI(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
-		return edges[i][j].i2;
-	}
-
-	private int GetEndJ(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
-		return edges[i][j].j2;
-	}
-
-	private boolean GetVis(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
-		return edges[i][j].vis;
-	}
-
-	private void SetVis(int i, int j, boolean b) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
-		edges[i][j].vis = b;
-	}
-
-	public boolean[][] makeBMatrix(int Nx, int Ny, boolean value) {
-		boolean[][] matrix = new boolean[Nx][Ny];
-
-		for (int i = 0; i < Nx; ++i) {
-			for (int j = 0; j < Ny; ++j) {
-				matrix[i][j] = value;
-			}
-		}
-
-		return matrix;
-	}
-
-	public EdgeNode[][] MakeEMatrix(int Nx, int Ny) {
-		int i, j;
-		EdgeNode[][] matrix = new EdgeNode[Nx][];
-
-		for (i = 0; i < Nx; ++i) {
-			matrix[i] = new EdgeNode[Ny];
-			for (j = 0; j < Ny; ++j) {
-				matrix[i][j] = new EdgeNode(NIL, NIL, NIL, NIL, true);
-//				matrix[i][j].i1 = NIL;
-//				matrix[i][j].j1 = NIL;
-//				matrix[i][j].i2 = NIL;
-//				matrix[i][j].j2 = NIL;
-//				matrix[i][j].vis = true;
-			}
-		}
-
-		return matrix;
-	}
-
-	double perturbation() {
-		int c = uniformRandom(800001);
-		c -= 400000;
-
-		return ((c) / 899000.0);
-	}
-
-	private void storePnt(Coord P) {
-		if (num_pnts >= max_num_pnts) {
-			max_num_pnts += 1001;
-			pnts = Arrays.copyOf(pnts, max_num_pnts);
-		}
-
-		pnts[num_pnts] = new Coord(P.x, P.y);
-		num_pnts++;
-	}
-
-	void storeEdge(int i1, int j1, int i2, int j2) {
-		if ((i1 >= 0) && (j1 >= 0) && (i1 <= N_x) && (j1 <= N_y) && (i2 >= 0) && (j2 >= 0) && (i2 <= N_x) && (j2 <= N_y)) {
-			SetVis(i1, j1, false);
-			if (edges[i1][j1].i1 == NIL) {
-				assert edges[i1][j1].j1 == NIL;
-				edges[i1][j1].i1 = i2;
-				edges[i1][j1].j1 = j2;
-			} else {
-				assert edges[i1][j1].j1 != NIL;
-				assert edges[i1][j1].i2 == NIL;
-				assert edges[i1][j1].j2 == NIL;
-				edges[i1][j1].i2 = i2;
-				edges[i1][j1].j2 = j2;
-			}
-			SetVis(i2, j2, false);
-			if (edges[i2][j2].i1 == NIL) {
-				assert edges[i2][j2].j1 == NIL;
-				edges[i2][j2].i1 = i1;
-				edges[i2][j2].j1 = j1;
-			} else {
-				assert edges[i2][j2].j1 != NIL;
-				assert edges[i2][j2].i2 == NIL;
-				assert edges[i2][j2].j2 == NIL;
-				edges[i2][j2].i2 = i1;
-				edges[i2][j2].j2 = j1;
-			}
-		} else {
-			System.err.println("StoreEdge(): index out of bounds!");
-			System.err.printf("             (%d,%d) <--> (%d,%d)\n", i1, j1, i2, j2);
-		}
-	}
-
-	public void storeVertex(int i1, int j1) {
-		if (num_vertices >= max_num_vertices) {
-			max_num_vertices += 1001;
-			vertices = Arrays.copyOf(vertices, max_num_vertices);
-		}
-		vertices[num_vertices] = new VertexNode(i1, j1);
-		num_vertices++;
-	}
-
-	public boolean IsFull(int i, int j) {
-		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
-			return full[i][j];
-		} else {
-			return false;
-		}
-	}
-
-	public boolean IsOldFull(int i, int j, int N_x_old, int N_y_old, boolean[][] old_full) {
-		if (i >= 0 && i < N_x_old && j >= 0 && j < N_y_old) {
-			return old_full[i][j];
-		} else {
-			return false;
-		}
-	}
-
-	public boolean isCompletelyFull(int i, int j) {
-		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
-			return (top[i][j] && bot[i][j] && lft[i][j] && rgt[i][j]);
-		} else {
-			return false;
-		}
-	}
-
-	public boolean isCompletelyEmpty(int i, int j) {
-		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
-			return (!(top[i][j] || bot[i][j] || lft[i][j] || rgt[i][j]));
-		} else {
-			return true;
-		}
-	}
-
-	boolean ToBeKept(int i, int j) {
-		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
-			return keep[i][j];
-		} else {
-			return true;
-		}
-	}
-
-	boolean IsPossible(int i, int j) {
-		int c = 0;
-
-		if ((i < 0) || (i >= N_x) || (j < 0) || (j >= N_y)) {
-			return false;
-		}
-
-		if (ToBeKept(i, j) || IsFull(i, j)) {
-			return false;
-		}
-
-		if (IsFull(i - 1, j + 1)) {
-			if (!(IsFull(i - 1, j) || IsFull(i, j + 1))) {
-				return false;
-			}
-		}
-		if (IsFull(i - 1, j - 1)) {
-			if (!(IsFull(i - 1, j) || IsFull(i, j - 1))) {
-				return false;
-			}
-		}
-		if (IsFull(i + 1, j - 1)) {
-			if (!(IsFull(i + 1, j) || IsFull(i, j - 1))) {
-				return false;
-			}
-		}
-		if (IsFull(i + 1, j + 1)) {
-			if (!(IsFull(i + 1, j) || IsFull(i, j + 1))) {
-				return false;
-			}
-		}
-
-		if (holes) {
-			c = uniformRandom(30);
-		}
-
-		if (c != 0) {
-			if (IsFull(i, j - 1) && IsFull(i, j + 1)) {
-				if (!(IsFull(i + 1, j) || IsFull(i - 1, j))) {
-					return false;
-				}
-			}
-			if (IsFull(i - 1, j) && IsFull(i + 1, j)) {
-				if (!(IsFull(i, j - 1) || IsFull(i, j + 1))) {
-					return false;
-				}
-			}
-		}
-
-		return true;
-	}
-
-	void StoreCandidate(int i, int j) {
-		int k;
-
-		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
-			if (!(ToBeKept(i, j) && IsFull(i, j))) {
-				k = convert(i, j); // NOTE arg change
-				if (num_candidates >= max_num_candidates) {
-					max_num_candidates += 1001;
-					candidates = Arrays.copyOf(candidates, max_num_candidates);
-				}
-				candidates[num_candidates] = k;
-				++num_candidates;
-			}
-		}
-	}
-
-	void StoreKeepCandidate(int i, int j) {
-		int k;
-
-		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
-			if (!(ToBeKept(i, j) && IsFull(i, j))) {
-				k = convert(i, j);
-				if (num_keep_candidates >= max_num_keep_candidates) {
-					max_num_keep_candidates += 1001;
-					keep_candidates = Arrays.copyOf(keep_candidates, max_num_keep_candidates);
-				}
-				keep_candidates[num_keep_candidates] = k;
-				++num_keep_candidates;
-			}
-		}
-	}
-
-	void Mark(int i, int j, int[] num_cells) { // NOTE C STYLE INPUT int*
-		assert ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y));
-		full[i][j] = true;
-		num_cells[0]++;
-
-		if (i > 0) {
-			StoreCandidate(i - 1, j);
-		}
-		if (j > 0) {
-			StoreCandidate(i, j - 1);
-		}
-		if (i < (N_x - 1)) {
-			StoreCandidate(i + 1, j);
-		}
-		if (j < (N_y - 1)) {
-			StoreCandidate(i, j + 1);
-		}
-	}
-
-	void Keep(int i, int j, boolean store_candidates, int[] num_keep) { // NOTE C STYLE INPUT int*
-		if ((i >= 0) && (j >= 0) && (i < N_x) && (j < N_y)) {
-			keep[i][j] = true;
-			num_keep[0]++;
-
-			if (store_candidates) {
-				if (i > 0) {
-					StoreKeepCandidate(i - 1, j);
-				}
-				if (j > 0) {
-					StoreKeepCandidate(i, j - 1);
-				}
-				if (i < (N_x - 1)) {
-					StoreKeepCandidate(i + 1, j);
-				}
-				if (j < (N_y - 1)) {
-					StoreKeepCandidate(i, j + 1);
-				}
-			}
-		}
-	}
-
-	int num_pnts = 0, max_num_pnts; // NOTE these are not defined outside method in C version
-
-	List<double[]> OutputLoop(PrintStream output, int i1, int j1, int[] total_number, boolean aligned, boolean perturb, int loop_cntr,
-			boolean diagonal, int smooth) {
-		int number = 0, i0, j0;
-//int e_comp(const void *e1, const void *e2); // NOTE WTF?
-		int i, j, k, i2, j2, sum = 0;
-		VertexNode zero = new VertexNode(0, 0);
-		Coord p = new Coord(0, 0); // NOTE CHECK
-		pnts = null; // NOTE CHECK
-		Coord[] old_pnts = null; // NOTE CHECK
-		num_pnts = 0;
-		max_num_pnts = 0;
-		int old_num_pnts;
-
-		assert ((i1 >= 0) && (i1 <= N_x) && (j1 >= 0) && (j1 <= N_y));
-
-		/*                                                                        */
-		/* count the number of edges of this loop */
-		/*                                                                        */
-		i0 = i1;
-		j0 = j1;
-		num_vertices = 0;
-
-		do {
-			storeVertex(i1, j1);
-			SetVis(i1, j1, true);
-			i2 = GetStartI(i1, j1);
-			j2 = GetStartJ(i1, j1);
-			assert ((i2 >= 0) && (i2 <= N_x) && (j2 >= 0) && (j2 <= N_y));
-			if (GetVis(i2, j2)) {
-				i2 = GetEndI(i1, j1);
-				j2 = GetEndJ(i1, j1);
-				if (GetVis(i2, j2)) {
-					i2 = i0;
-					j2 = j0;
-				}
-				assert ((i2 >= 0) && (i2 <= N_x) && (j2 >= 0) && (j2 <= N_y));
-			}
-			i1 = i2;
-			j1 = j2;
-		} while (!GetVis(i1, j1));
-		assert ((i0 == i1) && (j0 == j1));
-		storeVertex(i0, j0);
-		storeVertex(i0, j0);
-		number = num_vertices - 1;
-
-		i = 0;
-		j = 1;
-		k = 2;
-		while (k < number) {
-			while ((k < number) && (((vertices[i].i1 == vertices[j].i1) && (vertices[i].i1 == vertices[k].i1))
-					|| ((vertices[i].j1 == vertices[j].j1) && (vertices[i].j1 == vertices[k].j1)))) {
-				j = k;
-				++k;
-			}
-			++i;
-			vertices[i].i1 = vertices[j].i1;
-			vertices[i].j1 = vertices[j].j1;
-			++j;
-			++k;
-		}
-		++i;
-		vertices[i].i1 = vertices[j].i1;
-		vertices[i].j1 = vertices[j].j1;
-
-		if (diagonal) {
-			number = i + 1;
-			i = 0;
-			j = 1;
-			k = 2;
-			while (k < number) {
-				while ((k < number)
-						&& ((vertices[i].i1 != vertices[j].i1) && (vertices[i].j1 != vertices[j].j1) && (vertices[i].i1 != vertices[k].i1)
-								&& (vertices[i].j1 != vertices[k].j1))
-						&& (((vertices[i].i1 - vertices[j].i1) * (vertices[i].j1 - vertices[k].j1)) == ((vertices[i].j1 - vertices[j].j1)
-								* (vertices[i].i1 - vertices[k].i1)))) {
-					j = k;
-					++k;
-				}
-				++i;
-				vertices[i].i1 = vertices[j].i1;
-				vertices[i].j1 = vertices[j].j1;
-				++j;
-				++k;
-			}
-			++i;
-			vertices[i].i1 = vertices[j].i1;
-			vertices[i].j1 = vertices[j].j1;
-		}
-
-		if ((vertices[i - 1].i1 == vertices[i].i1) && (vertices[i - 1].j1 == vertices[i].j1)) {
-			number = i;
-		} else if ((vertices[0].i1 == vertices[i].i1) && (vertices[0].j1 == vertices[i].j1)) {
-			number = i + 1;
-		} else {
-			number = i;
-		}
-
-		for (i = 1; i < number; ++i) {
-			sum += det2D(vertices[i - 1], vertices[i], zero);
-		}
-
-		if (((loop_cntr == 0) && (sum < 0)) || ((loop_cntr > 0) && (sum > 0))) {
-			i = 1;
-			j = number - 2;
-			while (i < j) {
-				// NOTE inlined swap() method here
-//				swap(vertices[i], vertices[j], zero);
-				zero = vertices[i];
-				vertices[i] = vertices[j];
-				vertices[j] = zero;
-				++i;
-				--j;
-			}
-		}
-
-		List<double[]> ring = new ArrayList<>(number);
-
-		if (aligned) {
-			total_number[0] += number; // *total_number += number;
-			for (int l = 0; l < number; l++) {
-				ring.add(new double[] { vertices[l].i1, vertices[l].j1 });
-			}
-		} else {
-			max_num_pnts = (number - 1) * (smooth + 1) + 2;
-			num_pnts = 0;
-			pnts = new Coord[max_num_pnts]; // NOTE
-			if (perturb) {
-				--number;
-				for (i = 0; i < number; ++i) {
-					p.x = vertices[i].i1 + perturbation();
-					p.y = vertices[i].j1 + perturbation();
-					storePnt(p);
-				}
-				storePnt(pnts[0]); // close ring (unperturbed)
-			} else {
-				p.x = vertices[0].i1; // could just instantiate p
-				p.y = vertices[0].j1;
-				storePnt(p);
-				number -= 2;
-				for (i = 1; i < number; ++i) {
-					if (vertices[i].i1 == vertices[i - 1].i1) {
-						p.y = vertices[i].j1 + perturbation();
-					} else {
-						p.x = vertices[i].i1 + perturbation();
-					}
-					storePnt(p);
-				}
-				i = number;
-				if (vertices[i].i1 == vertices[i - 1].i1) {
-					p.y = vertices[i].j1;
-				} else {
-					p.x = vertices[i].i1;
-				}
-				storePnt(p);
-				storePnt(pnts[0]); // close ring (unperturbed)
-			}
-
-			while (smooth > 0) {
-				old_pnts = pnts;
-				old_num_pnts = num_pnts;
-				max_num_pnts *= 2;
-				num_pnts = 0;
-				pnts = new Coord[max_num_pnts]; // NOTE
-				for (i = 1; i < old_num_pnts; ++i) {
-					p.x = (3.0 * old_pnts[i - 1].x + old_pnts[i].x) / 4.0;
-					p.y = (3.0 * old_pnts[i - 1].y + old_pnts[i].y) / 4.0;
-					storePnt(p);
-					p.x = (old_pnts[i - 1].x + 3.0 * old_pnts[i].x) / 4.0;
-					p.y = (old_pnts[i - 1].y + 3.0 * old_pnts[i].y) / 4.0;
-					storePnt(p);
-				}
-				p.x = (3.0 * old_pnts[0].x + old_pnts[1].x) / 4.0;
-				p.y = (3.0 * old_pnts[0].y + old_pnts[1].y) / 4.0;
-				storePnt(p);
-				--smooth;
-			}
-
-			for (int l = 0; l < num_pnts; l++) {
-				ring.add(new double[] { pnts[l].x, pnts[l].y });
-			}
-
-			total_number[0] += num_pnts; // *total_number += num_pnts;
-		}
-		pnts = null;
-
-		return ring;
-	}
-
-	void initializeGrid() {
-		full = makeBMatrix(N_x, N_y, false);
-		keep = makeBMatrix(N_x, N_y, false);
-	}
-
-	void SelectRandomCells(int[] num_cells, int max_cells, int[] num_keep, int max_keep) { // NOTE C-style arg passing int*
-		int k, m, mm, i = 0, j, c = 0;
-
-		while ((num_cells[0] < max_cells) && (num_candidates > 0)) {
-			c = uniformRandom(num_candidates);
-			k = candidates[c];
-			--num_candidates;
-			candidates[c] = candidates[num_candidates];
-//			j = invert(k, i);
-			i = k / N_y; // NOTE inlined invert()
-			j = k - i * N_y; // NOTE inlined invert()
-			if (IsPossible(i, j)) {
-				Mark(i, j, num_cells);
-			}
-			if ((num_keep_candidates > 0) && (num_keep[0] < max_keep)) {
-				if ((max_cells - num_cells[0] - 1) > 0) {
-					mm = 1 + 2 * (max_keep - num_keep[0]) / (max_cells - num_cells[0] - 1);
-				} else {
-					mm = 1 + 2 * (max_keep - num_keep[0]);
-				}
-				m = 0;
-				while ((m < mm) && (num_keep_candidates > 0)) {
-					c = uniformRandom(num_keep_candidates);
-					k = keep_candidates[c];
-					--num_keep_candidates;
-					keep_candidates[c] = keep_candidates[num_keep_candidates];
-//					j = invert(k, i);
-					i = k / N_y; // NOTE INLINED INVERT
-					j = k - i * N_y; // NOTE INLINED INVERT
-					if (!IsFull(i, j)) {
-						Keep(i, j, true, num_keep);
-						++m;
-					}
-				}
-			}
-		}
-	}
-
-	PrintStream output = System.out;
-	int i = 0, j = 0, k, m, n, mm, nn;
-	int max_keep, max_cells;
-	int[] num_keep = new int[1], num_cells = new int[1]; // NOTE replicates c++ int* (pass by value)
-	int[] total_number = new int[1];
-	int hierarchy_cntr = 1;
-	int loop_cntr, i1, j1;
-	double keep_percent;
-	int N_x_old, N_y_old, ii, jj;
-	boolean[][] old_keep, old_full;
-
-	// generates the polygon
-	public List<List<double[]>> Compute(double mark_percent, boolean perturb, boolean aligned, int hierarchy, boolean diagonal, int smooth,
-			String file_name) {
-		// 1. allocate the grid
-		N = N_x * N_y;
-		initializeGrid();
-
-		// 2. select cells to be kept
-		keep_percent = (1.0 - mark_percent) * 0.95;
-		max_keep = (int) (N * keep_percent);
-		max_cells = (int) (N * mark_percent);
-
-		m = N_y / 10;
-		for (i = 0; i < N_x; ++i) {
-			k = uniformRandom(m);
-			for (j = 0; j <= k; ++j) {
-				Keep(i, j, false, num_keep);
-			}
-			k = uniformRandom(m);
-			for (j = N_y - 1; j >= N_y - k - 1; --j) {
-				Keep(i, j, false, num_keep);
-			}
-		}
-		for (j = 0; j < N_y; ++j) {
-			k = uniformRandom(m);
-			for (i = 0; i <= k; ++i) {
-				Keep(i, j, false, num_keep);
-			}
-			k = uniformRandom(m);
-			for (i = N_x - 1; i >= N_x - k - 1; --i) {
-				Keep(i, j, false, num_keep);
-			}
-		}
-
-		if (num_keep[0] < max_keep) {
-			m = (max_keep - num_keep[0]) / 4;
-			n = 0;
-			for (n = 0; n < m; ++n) {
-				k = uniformRandom(N);
-//				j = invert(k, i);
-				i = k / N_y; // NOTE INLINED INVERT
-				j = k - i * N_y; // NOTE INLINED INVERT
-				Keep(i, j, true, num_keep);
-			}
-		}
-
-		i = uniformRandom(N_x);
-		j = uniformRandom(N_y);
-
-		if (num_keep[0] < max_keep) {
-			for (ii = i - N_x / 30; ii < (i + N_x / 30); ++ii) {
-				for (jj = j - N_y / 30; jj < (j + N_y / 30); ++jj) {
-					Keep(ii, jj, true, num_keep);
-					if (num_keep[0] >= max_keep) {
-						break;
-					}
-				}
-				if (num_keep[0] >= max_keep) {
-					break;
-				}
-			}
-		}
-
-		// 3. select seed cell(s)
-		m = 7 * N_x / 9;
-		n = 7 * N_y / 9;
-		mm = N_x / 9;
-		nn = N_y / 9;
-		do {
-			i = uniformRandom(m);
-			j = uniformRandom(n);
-			i += mm;
-			j += nn;
-		} while (!IsPossible(i, j));
-		Mark(i, j, num_cells);
-
-		// 4. randomly add cells to already selected cells
-		SelectRandomCells(new int[] { 1 }, max_cells, num_keep, max_keep);
-
-		// 5. use current polygon as "seed" for a refinement
-		while (hierarchy_cntr <= hierarchy) {
-			/*                                                                  */
-			/* reset grid data */
-			/*                                                                  */
-			old_full = full;
-			old_keep = keep;
-			N_x_old = N_x;
-			N_y_old = N_y;
-			N_x *= 3;
-			N_y *= 3;
-			N = N_x * N_y;
-
-			initializeGrid();
-			num_candidates = 0;
-			num_keep_candidates = 0;
-			max_keep = (int) (N * keep_percent);
-			max_cells = (int) (N * mark_percent);
-			num_keep = new int[1]; // =0
-			num_cells = new int[1]; // =0
-
-			/*                                                                  */
-			/* copy data from coarse grid to fine grid */
-			/*                                                                  */
-			for (i = 0; i < N_x_old; ++i) {
-				for (j = 0; j < N_y_old; ++j) {
-					ii = i * 3;
-					jj = j * 3;
-					if (IsOldFull(i, j, N_x_old, N_y_old, old_full)) {
-						Mark(ii + 1, jj + 1, num_cells);
-						if (IsOldFull(i - 1, j, N_x_old, N_y_old, old_full) && IsOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
-							Mark(ii, jj, num_cells);
-						}
-						if (IsOldFull(i - 1, j, N_x_old, N_y_old, old_full) && IsOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
-							Mark(ii, jj + 2, num_cells);
-						}
-						if (IsOldFull(i + 1, j, N_x_old, N_y_old, old_full) && IsOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
-							Mark(ii + 2, jj + 2, num_cells);
-						}
-						if (IsOldFull(i + 1, j, N_x_old, N_y_old, old_full) && IsOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
-							Mark(ii + 2, jj, num_cells);
-						}
-						if (IsOldFull(i - 1, j, N_x_old, N_y_old, old_full)) {
-							Mark(ii, jj + 1, num_cells);
-						}
-						if (IsOldFull(i + 1, j, N_x_old, N_y_old, old_full)) {
-							Mark(ii + 2, jj + 1, num_cells);
-						}
-						if (IsOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
-							Mark(ii + 1, jj, num_cells);
-						}
-						if (IsOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
-							Mark(ii + 1, jj + 2, num_cells);
-						}
-					} else {
-						Keep(ii + 1, jj + 1, true, num_keep);
-						if (!IsOldFull(i - 1, j, N_x_old, N_y_old, old_full) && !IsOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
-							Keep(ii, jj, true, num_keep);
-						}
-						if (!IsOldFull(i - 1, j, N_x_old, N_y_old, old_full) && !IsOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
-							Keep(ii, jj + 2, true, num_keep);
-						}
-						if (!IsOldFull(i + 1, j, N_x_old, N_y_old, old_full) && !IsOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
-							Keep(ii + 2, jj + 2, true, num_keep);
-						}
-						if (!IsOldFull(i + 1, j, N_x_old, N_y_old, old_full) && !IsOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
-							Keep(ii + 2, jj, true, num_keep);
-						}
-						if (!IsOldFull(i - 1, j, N_x_old, N_y_old, old_full)) {
-							Keep(ii, jj + 1, true, num_keep);
-						}
-						if (!IsOldFull(i + 1, j, N_x_old, N_y_old, old_full)) {
-							Keep(ii + 2, jj + 1, true, num_keep);
-						}
-						if (!IsOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
-							Keep(ii + 1, jj, true, num_keep);
-						}
-						if (!IsOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
-							Keep(ii + 1, jj + 2, true, num_keep);
-						}
-					}
-				}
-			}
-
-//     old_full = FreeBMatrix(old_full, N_x_old);
-//     old_keep = FreeBMatrix(old_keep, N_x_old);
-
-			if (hierarchy_cntr <= hierarchy) {
-				// printf("new round: num_keep = %d, max_keep = %d, num_cells = %d, max_cells =
-				// %d\n", num_keep, max_keep, num_cells, max_cells);
-				SelectRandomCells(num_cells, max_cells, num_keep, max_keep);
-			} else {
-				// printf("thinned: num_keep = %d, max_keep = %d, num_cells = %d, max_cells =
-				// %d\n", num_keep, max_keep, num_cells, max_cells);
-			}
-
-			hierarchy_cntr += 1;
-		}
-
-		/**************************************************************************/
-		/*                                                                        */
-		/* output polygon */
-		/*                                                                        */
-		/**************************************************************************/
-		/*                                                                        */
-		/* determine boundaries between marked and unmarked cells */
-		/*                                                                        */
-		edges = MakeEMatrix(N_x + 1, N_y + 1);
-
-		if (diagonal) {
-			top = makeBMatrix(N_x, N_y, false);
-			bot = makeBMatrix(N_x, N_y, false);
-			lft = makeBMatrix(N_x, N_y, false);
-			rgt = makeBMatrix(N_x, N_y, false);
-			for (i = 0; i < N_x; ++i) {
-				for (j = 0; j < N_y; ++j) {
-					if (IsFull(i, j)) {
-						setBot(i, j, true);
-						setTop(i, j, true);
-						setLft(i, j, true);
-						setRgt(i, j, true);
-					}
-				}
-			}
-			for (i = 0; i <= N_x; ++i) {
-				for (j = 0; j <= N_y; ++j) {
-					if (isCompletelyFull(i, j)) {
-						if (IsFull(i - 1, j) && IsFull(i - 1, j + 1) && IsFull(i, j + 1) && isCompletelyEmpty(i, j - 1)
-								&& isCompletelyEmpty(i + 1, j)) {
-							setBot(i, j, false);
-							setRgt(i, j, false);
-						} else if (IsFull(i + 1, j) && IsFull(i + 1, j + 1) && IsFull(i, j + 1) && isCompletelyEmpty(i, j - 1)
-								&& isCompletelyEmpty(i - 1, j)) {
-							setBot(i, j, false);
-							setLft(i, j, false);
-						} else if (IsFull(i + 1, j) && IsFull(i + 1, j - 1) && IsFull(i, j - 1) && isCompletelyEmpty(i, j + 1)
-								&& isCompletelyEmpty(i - 1, j)) {
-							setTop(i, j, false);
-							setLft(i, j, false);
-						} else if (IsFull(i - 1, j) && IsFull(i - 1, j - 1) && IsFull(i, j - 1) && isCompletelyEmpty(i, j + 1)
-								&& isCompletelyEmpty(i + 1, j)) {
-							setTop(i, j, false);
-							setRgt(i, j, false);
-						}
-					}
-				}
-			}
-			for (i = 0; i <= N_x; ++i) {
-				for (j = 0; j <= N_y; ++j) {
-					if (isCompletelyFull(i, j)) {
-						if (isCompletelyEmpty(i, j - 1)) {
-							storeEdge(i, j, i + 1, j);
-						}
-						if (isCompletelyEmpty(i - 1, j)) {
-							storeEdge(i, j, i, j + 1);
-						}
-					} else if (isCompletelyEmpty(i, j)) {
-						if (isCompletelyFull(i, j - 1)) {
-							storeEdge(i, j, i + 1, j);
-						}
-						if (isCompletelyFull(i - 1, j)) {
-							storeEdge(i, j + 1, i, j);
-
-						}
-					} else if (isTopFull(i, j)) {
-						if (IsRgtFull(i, j)) {
-							storeEdge(i, j + 1, i + 1, j);
-						} else if (IsLftFull(i, j)) {
-							storeEdge(i, j, i + 1, j + 1);
-						}
-					} else if (IsBotFull(i, j)) {
-						if (IsLftFull(i, j)) {
-							storeEdge(i, j + 1, i + 1, j);
-						} else if (IsRgtFull(i, j)) {
-							storeEdge(i, j, i + 1, j + 1);
-						}
-					} else {
-						System.out.format("cell[%s,%s]: neither top nor bottom is full!\n", i, j);
-					}
-				}
-			}
-		} else {
-			for (i = 0; i <= N_x; ++i) {
-				for (j = 0; j <= N_y; ++j) {
-					if (IsFull(i, j)) {
-						if (!IsFull(i, j - 1)) {
-							storeEdge(i, j, i + 1, j);
-						}
-						if (!IsFull(i - 1, j)) {
-							storeEdge(i, j, i, j + 1);
-						}
-					} else {
-						if (IsFull(i, j - 1)) {
-							storeEdge(i, j, i + 1, j);
-						}
-						if (IsFull(i - 1, j)) {
-							storeEdge(i, j, i, j + 1);
-						}
-					}
-				}
-			}
-		}
-
-		for (i1 = 0; i1 <= N_x; ++i1) {
-			for (j1 = 0; j1 <= N_y; ++j1) {
-				if (edges[i1][j1].i1 != NIL) {
-					assert (edges[i1][j1].j1 != NIL);
-					assert (edges[i1][j1].i2 != NIL);
-					assert (edges[i1][j1].j2 != NIL);
-					assert (((edges[edges[i1][j1].i1][edges[i1][j1].j1].i1 == i1) && (edges[edges[i1][j1].i1][edges[i1][j1].j1].j1 == j1))
-							|| ((edges[edges[i1][j1].i1][edges[i1][j1].j1].i2 == i1)
-									&& (edges[edges[i1][j1].i1][edges[i1][j1].j1].j2 == j1)));
-				}
-			}
-		}
-
-		List<List<double[]>> rings = new ArrayList<>();
-		loop_cntr = 0;
-		for (i1 = 0; i1 <= N_x; ++i1) {
-			for (j1 = 0; j1 <= N_y; ++j1) {
-				if (edges[i1][j1].i1 != NIL) {
-					assert (edges[i1][j1].j1 != NIL);
-					assert (edges[i1][j1].i2 != NIL);
-					assert (edges[i1][j1].j2 != NIL);
-					assert (((edges[edges[i1][j1].i1][edges[i1][j1].j1].i1 == i1) && (edges[edges[i1][j1].i1][edges[i1][j1].j1].j1 == j1))
-							|| ((edges[edges[i1][j1].i1][edges[i1][j1].j1].i2 == i1)
-									&& (edges[edges[i1][j1].i1][edges[i1][j1].j1].j2 == j1)));
-				}
-				if (!GetVis(i1, j1)) {
-					rings.add(OutputLoop(output, i1, j1, total_number, aligned, perturb, loop_cntr, diagonal, smooth));
-					++loop_cntr;
-				}
-			}
-		}
-
-		System.out.format("\n%s edges generated within %d loops\n", total_number[0] - loop_cntr, loop_cntr);
-		return rings;
-	}
-
 	private int N_x;
 	private int N_y;
-	private String file_name;
 	private boolean perturb;
 	private boolean aligned;
 	private boolean diagonal;
 	private int hierarchy = 0;
 	private int smooth = 0;
-	private long seed = 0;
 	private double mark_percent = 0.5;
 	private boolean holes = false;
 
@@ -1128,7 +150,916 @@ public class SRPolygonGenerator {
 	}
 
 	public List<List<double[]>> getSRPolygon() {
-		return Compute(mark_percent, perturb, aligned, hierarchy, diagonal, smooth, file_name);
+		return compute(mark_percent, perturb, aligned, hierarchy, diagonal, smooth);
+	}
+
+	// generates the polygon
+	private List<List<double[]>> compute(double mark_percent, boolean perturb, boolean aligned, int hierarchy, boolean diagonal, int smooth) {
+		// 1. allocate the grid
+		N = N_x * N_y;
+		initializeGrid();
+
+		// 2. select cells to be kept
+		keep_percent = (1.0 - mark_percent) * 0.95;
+		max_keep = (int) (N * keep_percent);
+		max_cells = (int) (N * mark_percent);
+
+		m = N_y / 10;
+		for (i = 0; i < N_x; ++i) {
+			k = uniformRandom(m);
+			for (j = 0; j <= k; ++j) {
+				keep(i, j, false, num_keep);
+			}
+			k = uniformRandom(m);
+			for (j = N_y - 1; j >= N_y - k - 1; --j) {
+				keep(i, j, false, num_keep);
+			}
+		}
+		for (j = 0; j < N_y; ++j) {
+			k = uniformRandom(m);
+			for (i = 0; i <= k; ++i) {
+				keep(i, j, false, num_keep);
+			}
+			k = uniformRandom(m);
+			for (i = N_x - 1; i >= N_x - k - 1; --i) {
+				keep(i, j, false, num_keep);
+			}
+		}
+
+		if (num_keep[0] < max_keep) {
+			m = (max_keep - num_keep[0]) / 4;
+			n = 0;
+			for (n = 0; n < m; ++n) {
+				k = uniformRandom(N);
+				i = k / N_y;
+				j = k - i * N_y;
+				keep(i, j, true, num_keep);
+			}
+		}
+
+		i = uniformRandom(N_x);
+		j = uniformRandom(N_y);
+
+		if (num_keep[0] < max_keep) {
+			for (ii = i - N_x / 30; ii < (i + N_x / 30); ++ii) {
+				for (jj = j - N_y / 30; jj < (j + N_y / 30); ++jj) {
+					keep(ii, jj, true, num_keep);
+					if (num_keep[0] >= max_keep) {
+						break;
+					}
+				}
+				if (num_keep[0] >= max_keep) {
+					break;
+				}
+			}
+		}
+
+		// 3. select seed cell(s)
+		m = 7 * N_x / 9;
+		n = 7 * N_y / 9;
+		mm = N_x / 9;
+		nn = N_y / 9;
+		do {
+			i = uniformRandom(m);
+			j = uniformRandom(n);
+			i += mm;
+			j += nn;
+		} while (!isPossible(i, j));
+		mark(i, j, num_cells);
+
+		// 4. randomly add cells to already selected cells
+		selectRandomCells(new int[] { 1 }, max_cells, num_keep, max_keep);
+
+		// 5. use current polygon as "seed" for a refinement
+		while (hierarchy_cntr <= hierarchy) {
+			// 5.1 reset grid data
+			old_full = full;
+			old_keep = keep;
+			N_x_old = N_x;
+			N_y_old = N_y;
+			N_x *= 3;
+			N_y *= 3;
+			N = N_x * N_y;
+
+			initializeGrid();
+			num_candidates = 0;
+			num_keep_candidates = 0;
+			max_keep = (int) (N * keep_percent);
+			max_cells = (int) (N * mark_percent);
+			num_keep = new int[1]; // =0
+			num_cells = new int[1]; // =0
+
+			// 5.2 copy data from coarse grid to fine grid
+			for (i = 0; i < N_x_old; ++i) {
+				for (j = 0; j < N_y_old; ++j) {
+					ii = i * 3;
+					jj = j * 3;
+					if (isOldFull(i, j, N_x_old, N_y_old, old_full)) {
+						mark(ii + 1, jj + 1, num_cells);
+						if (isOldFull(i - 1, j, N_x_old, N_y_old, old_full) && isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
+							mark(ii, jj, num_cells);
+						}
+						if (isOldFull(i - 1, j, N_x_old, N_y_old, old_full) && isOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
+							mark(ii, jj + 2, num_cells);
+						}
+						if (isOldFull(i + 1, j, N_x_old, N_y_old, old_full) && isOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
+							mark(ii + 2, jj + 2, num_cells);
+						}
+						if (isOldFull(i + 1, j, N_x_old, N_y_old, old_full) && isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
+							mark(ii + 2, jj, num_cells);
+						}
+						if (isOldFull(i - 1, j, N_x_old, N_y_old, old_full)) {
+							mark(ii, jj + 1, num_cells);
+						}
+						if (isOldFull(i + 1, j, N_x_old, N_y_old, old_full)) {
+							mark(ii + 2, jj + 1, num_cells);
+						}
+						if (isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
+							mark(ii + 1, jj, num_cells);
+						}
+						if (isOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
+							mark(ii + 1, jj + 2, num_cells);
+						}
+					} else {
+						keep(ii + 1, jj + 1, true, num_keep);
+						if (!isOldFull(i - 1, j, N_x_old, N_y_old, old_full) && !isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
+							keep(ii, jj, true, num_keep);
+						}
+						if (!isOldFull(i - 1, j, N_x_old, N_y_old, old_full) && !isOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
+							keep(ii, jj + 2, true, num_keep);
+						}
+						if (!isOldFull(i + 1, j, N_x_old, N_y_old, old_full) && !isOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
+							keep(ii + 2, jj + 2, true, num_keep);
+						}
+						if (!isOldFull(i + 1, j, N_x_old, N_y_old, old_full) && !isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
+							keep(ii + 2, jj, true, num_keep);
+						}
+						if (!isOldFull(i - 1, j, N_x_old, N_y_old, old_full)) {
+							keep(ii, jj + 1, true, num_keep);
+						}
+						if (!isOldFull(i + 1, j, N_x_old, N_y_old, old_full)) {
+							keep(ii + 2, jj + 1, true, num_keep);
+						}
+						if (!isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
+							keep(ii + 1, jj, true, num_keep);
+						}
+						if (!isOldFull(i, j + 1, N_x_old, N_y_old, old_full)) {
+							keep(ii + 1, jj + 2, true, num_keep);
+						}
+					}
+				}
+			}
+
+			if (hierarchy_cntr <= hierarchy) {
+				selectRandomCells(num_cells, max_cells, num_keep, max_keep);
+			}
+
+			hierarchy_cntr += 1;
+		}
+
+		/**************************************************************************/
+		/*                                                                        */
+		/* output polygon */
+		/*                                                                        */
+		/**************************************************************************/
+		/*                                                                        */
+		/* determine boundaries between marked and unmarked cells */
+		/*                                                                        */
+		edges = makeEMatrix(N_x + 1, N_y + 1);
+
+		if (diagonal) {
+			top = makeBMatrix(N_x, N_y, false);
+			bot = makeBMatrix(N_x, N_y, false);
+			lft = makeBMatrix(N_x, N_y, false);
+			rgt = makeBMatrix(N_x, N_y, false);
+			for (i = 0; i < N_x; ++i) {
+				for (j = 0; j < N_y; ++j) {
+					if (isFull(i, j)) {
+						setBot(i, j, true);
+						setTop(i, j, true);
+						setLft(i, j, true);
+						setRgt(i, j, true);
+					}
+				}
+			}
+			for (i = 0; i <= N_x; ++i) {
+				for (j = 0; j <= N_y; ++j) {
+					if (isCompletelyFull(i, j)) {
+						if (isFull(i - 1, j) && isFull(i - 1, j + 1) && isFull(i, j + 1) && isCompletelyEmpty(i, j - 1)
+								&& isCompletelyEmpty(i + 1, j)) {
+							setBot(i, j, false);
+							setRgt(i, j, false);
+						} else if (isFull(i + 1, j) && isFull(i + 1, j + 1) && isFull(i, j + 1) && isCompletelyEmpty(i, j - 1)
+								&& isCompletelyEmpty(i - 1, j)) {
+							setBot(i, j, false);
+							setLft(i, j, false);
+						} else if (isFull(i + 1, j) && isFull(i + 1, j - 1) && isFull(i, j - 1) && isCompletelyEmpty(i, j + 1)
+								&& isCompletelyEmpty(i - 1, j)) {
+							setTop(i, j, false);
+							setLft(i, j, false);
+						} else if (isFull(i - 1, j) && isFull(i - 1, j - 1) && isFull(i, j - 1) && isCompletelyEmpty(i, j + 1)
+								&& isCompletelyEmpty(i + 1, j)) {
+							setTop(i, j, false);
+							setRgt(i, j, false);
+						}
+					}
+				}
+			}
+			for (i = 0; i <= N_x; ++i) {
+				for (j = 0; j <= N_y; ++j) {
+					if (isCompletelyFull(i, j)) {
+						if (isCompletelyEmpty(i, j - 1)) {
+							storeEdge(i, j, i + 1, j);
+						}
+						if (isCompletelyEmpty(i - 1, j)) {
+							storeEdge(i, j, i, j + 1);
+						}
+					} else if (isCompletelyEmpty(i, j)) {
+						if (isCompletelyFull(i, j - 1)) {
+							storeEdge(i, j, i + 1, j);
+						}
+						if (isCompletelyFull(i - 1, j)) {
+							storeEdge(i, j + 1, i, j);
+
+						}
+					} else if (isTopFull(i, j)) {
+						if (isRgtFull(i, j)) {
+							storeEdge(i, j + 1, i + 1, j);
+						} else if (isLftFull(i, j)) {
+							storeEdge(i, j, i + 1, j + 1);
+						}
+					} else if (isBotFull(i, j)) {
+						if (isLftFull(i, j)) {
+							storeEdge(i, j + 1, i + 1, j);
+						} else if (isRgtFull(i, j)) {
+							storeEdge(i, j, i + 1, j + 1);
+						}
+					} else {
+						System.err.format("cell[%s,%s]: neither top nor bottom is full!%n", i, j);
+					}
+				}
+			}
+		} else {
+			for (i = 0; i <= N_x; ++i) {
+				for (j = 0; j <= N_y; ++j) {
+					if (isFull(i, j)) {
+						if (!isFull(i, j - 1)) {
+							storeEdge(i, j, i + 1, j);
+						}
+						if (!isFull(i - 1, j)) {
+							storeEdge(i, j, i, j + 1);
+						}
+					} else {
+						if (isFull(i, j - 1)) {
+							storeEdge(i, j, i + 1, j);
+						}
+						if (isFull(i - 1, j)) {
+							storeEdge(i, j, i, j + 1);
+						}
+					}
+				}
+			}
+		}
+
+		for (i1 = 0; i1 <= N_x; ++i1) {
+			for (j1 = 0; j1 <= N_y; ++j1) {
+				if (edges[i1][j1].i1 != NIL) {
+					assert (edges[i1][j1].j1 != NIL);
+					assert (edges[i1][j1].i2 != NIL);
+					assert (edges[i1][j1].j2 != NIL);
+					assert (((edges[edges[i1][j1].i1][edges[i1][j1].j1].i1 == i1) && (edges[edges[i1][j1].i1][edges[i1][j1].j1].j1 == j1))
+							|| ((edges[edges[i1][j1].i1][edges[i1][j1].j1].i2 == i1)
+									&& (edges[edges[i1][j1].i1][edges[i1][j1].j1].j2 == j1)));
+				}
+			}
+		}
+
+		List<List<double[]>> rings = new ArrayList<>();
+		loop_cntr = 0;
+		for (i1 = 0; i1 <= N_x; ++i1) {
+			for (j1 = 0; j1 <= N_y; ++j1) {
+				if (edges[i1][j1].i1 != NIL) {
+					assert (edges[i1][j1].j1 != NIL);
+					assert (edges[i1][j1].i2 != NIL);
+					assert (edges[i1][j1].j2 != NIL);
+					assert (((edges[edges[i1][j1].i1][edges[i1][j1].j1].i1 == i1) && (edges[edges[i1][j1].i1][edges[i1][j1].j1].j1 == j1))
+							|| ((edges[edges[i1][j1].i1][edges[i1][j1].j1].i2 == i1)
+									&& (edges[edges[i1][j1].i1][edges[i1][j1].j1].j2 == j1)));
+				}
+				if (!getVis(i1, j1)) {
+					rings.add(makePolygon(i1, j1, total_number, aligned, perturb, loop_cntr, diagonal, smooth));
+					++loop_cntr;
+				}
+			}
+		}
+		
+		return rings;
+	}
+
+	private void initializeGrid() {
+		full = makeBMatrix(N_x, N_y, false);
+		keep = makeBMatrix(N_x, N_y, false);
+	}
+
+	int i = 0, j = 0, k, m, n, mm, nn;
+	int max_keep, max_cells;
+	int[] num_keep = new int[1], num_cells = new int[1]; // NOTE replicates c++ int* (pass by value)
+	int[] total_number = new int[1];
+	int hierarchy_cntr = 1;
+	int loop_cntr, i1, j1;
+	double keep_percent;
+	int N_x_old, N_y_old, ii, jj;
+	boolean[][] old_keep, old_full;
+
+	private List<double[]> makePolygon(int i1, int j1, int[] total_number, boolean aligned, boolean perturb, int loop_cntr, boolean diagonal,
+			int smooth) {
+		int number = 0, i0, j0;
+		int i, j, k, i2, j2, sum = 0;
+		VertexNode zero = new VertexNode(0, 0);
+		Coord p = new Coord(0, 0); // NOTE CHECK
+		pnts = null; // NOTE CHECK
+		Coord[] old_pnts = null; // NOTE CHECK
+		num_pnts = 0;
+		max_num_pnts = 0;
+		int old_num_pnts;
+
+		assert ((i1 >= 0) && (i1 <= N_x) && (j1 >= 0) && (j1 <= N_y));
+
+		/*                                                                        */
+		/* count the number of edges of this loop */
+		/*                                                                        */
+		i0 = i1;
+		j0 = j1;
+		num_vertices = 0;
+
+		do {
+			storeVertex(i1, j1);
+			setVis(i1, j1, true);
+			i2 = getStartI(i1, j1);
+			j2 = getStartJ(i1, j1);
+			assert ((i2 >= 0) && (i2 <= N_x) && (j2 >= 0) && (j2 <= N_y));
+			if (getVis(i2, j2)) {
+				i2 = getEndI(i1, j1);
+				j2 = getEndJ(i1, j1);
+				if (getVis(i2, j2)) {
+					i2 = i0;
+					j2 = j0;
+				}
+				assert ((i2 >= 0) && (i2 <= N_x) && (j2 >= 0) && (j2 <= N_y));
+			}
+			i1 = i2;
+			j1 = j2;
+		} while (!getVis(i1, j1));
+		assert ((i0 == i1) && (j0 == j1));
+		storeVertex(i0, j0);
+		storeVertex(i0, j0);
+		number = num_vertices - 1;
+
+		i = 0;
+		j = 1;
+		k = 2;
+		while (k < number) {
+			while ((k < number) && (((vertices[i].i1 == vertices[j].i1) && (vertices[i].i1 == vertices[k].i1))
+					|| ((vertices[i].j1 == vertices[j].j1) && (vertices[i].j1 == vertices[k].j1)))) {
+				j = k;
+				++k;
+			}
+			++i;
+			vertices[i].i1 = vertices[j].i1;
+			vertices[i].j1 = vertices[j].j1;
+			++j;
+			++k;
+		}
+		++i;
+		vertices[i].i1 = vertices[j].i1;
+		vertices[i].j1 = vertices[j].j1;
+
+		if (diagonal) {
+			number = i + 1;
+			i = 0;
+			j = 1;
+			k = 2;
+			while (k < number) {
+				while ((k < number)
+						&& ((vertices[i].i1 != vertices[j].i1) && (vertices[i].j1 != vertices[j].j1) && (vertices[i].i1 != vertices[k].i1)
+								&& (vertices[i].j1 != vertices[k].j1))
+						&& (((vertices[i].i1 - vertices[j].i1) * (vertices[i].j1 - vertices[k].j1)) == ((vertices[i].j1 - vertices[j].j1)
+								* (vertices[i].i1 - vertices[k].i1)))) {
+					j = k;
+					++k;
+				}
+				++i;
+				vertices[i].i1 = vertices[j].i1;
+				vertices[i].j1 = vertices[j].j1;
+				++j;
+				++k;
+			}
+			++i;
+			vertices[i].i1 = vertices[j].i1;
+			vertices[i].j1 = vertices[j].j1;
+		}
+
+		if ((vertices[i - 1].i1 == vertices[i].i1) && (vertices[i - 1].j1 == vertices[i].j1)) {
+			number = i;
+		} else if ((vertices[0].i1 == vertices[i].i1) && (vertices[0].j1 == vertices[i].j1)) {
+			number = i + 1;
+		} else {
+			number = i;
+		}
+
+		for (i = 1; i < number; ++i) {
+			sum += det2D(vertices[i - 1], vertices[i], zero);
+		}
+
+		if (((loop_cntr == 0) && (sum < 0)) || ((loop_cntr > 0) && (sum > 0))) {
+			i = 1;
+			j = number - 2;
+			while (i < j) {
+				zero = vertices[i]; // swap
+				vertices[i] = vertices[j];
+				vertices[j] = zero;
+				++i;
+				--j;
+			}
+		}
+
+		List<double[]> ring = new ArrayList<>(number);
+
+		if (aligned) {
+			total_number[0] += number; // *total_number += number;
+			for (int l = 0; l < number; l++) {
+				ring.add(new double[] { vertices[l].i1, vertices[l].j1 });
+			}
+		} else {
+			max_num_pnts = (number - 1) * (smooth + 1) + 2;
+			num_pnts = 0;
+			pnts = new Coord[max_num_pnts]; // NOTE
+			if (perturb) {
+				--number;
+				for (i = 0; i < number; ++i) {
+					p.x = vertices[i].i1 + perturbation();
+					p.y = vertices[i].j1 + perturbation();
+					storePnt(p);
+				}
+				storePnt(pnts[0]); // close ring (unperturbed)
+			} else {
+				p.x = vertices[0].i1; // could just instantiate p
+				p.y = vertices[0].j1;
+				storePnt(p);
+				number -= 2;
+				for (i = 1; i < number; ++i) {
+					if (vertices[i].i1 == vertices[i - 1].i1) {
+						p.y = vertices[i].j1 + perturbation();
+					} else {
+						p.x = vertices[i].i1 + perturbation();
+					}
+					storePnt(p);
+				}
+				i = number;
+				if (vertices[i].i1 == vertices[i - 1].i1) {
+					p.y = vertices[i].j1;
+				} else {
+					p.x = vertices[i].i1;
+				}
+				storePnt(p);
+				storePnt(pnts[0]); // close ring (with unperturbed coordinate)
+			}
+
+			while (smooth > 0) {
+				old_pnts = pnts;
+				old_num_pnts = num_pnts;
+				max_num_pnts *= 2;
+				num_pnts = 0;
+				pnts = new Coord[max_num_pnts];
+				for (i = 1; i < old_num_pnts; ++i) {
+					p.x = (3.0 * old_pnts[i - 1].x + old_pnts[i].x) / 4.0;
+					p.y = (3.0 * old_pnts[i - 1].y + old_pnts[i].y) / 4.0;
+					storePnt(p);
+					p.x = (old_pnts[i - 1].x + 3.0 * old_pnts[i].x) / 4.0;
+					p.y = (old_pnts[i - 1].y + 3.0 * old_pnts[i].y) / 4.0;
+					storePnt(p);
+				}
+				p.x = (3.0 * old_pnts[0].x + old_pnts[1].x) / 4.0;
+				p.y = (3.0 * old_pnts[0].y + old_pnts[1].y) / 4.0;
+				storePnt(p);
+				--smooth;
+			}
+
+			for (int l = 0; l < num_pnts; l++) {
+				ring.add(new double[] { pnts[l].x, pnts[l].y });
+			}
+
+			total_number[0] += num_pnts; // *total_number += num_pnts;
+		}
+		pnts = null;
+
+		return ring;
+	}
+
+	private int uniformRandom(int m) {
+
+		return rand.nextInt() % m;
+//		return rand.nextInt(m);
+	}
+
+	private int convert(int i, int j) {
+		return i * N_y + j;
+	}
+
+	private static double det2D(VertexNode u, VertexNode v, VertexNode w) {
+		return (((u).i1 - (v).i1) * ((v).j1 - (w).j1) + ((v).j1 - (u).j1) * ((v).i1 - (w).i1));
+	}
+
+	private void setTop(int I, int J, boolean W) {
+		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		top[I][J] = W;
+	}
+
+	private void setBot(int I, int J, boolean W) {
+		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		bot[I][J] = W;
+	}
+
+	private void setLft(int I, int J, boolean W) {
+		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		lft[I][J] = W;
+	}
+
+	private void setRgt(int I, int J, boolean W) {
+		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		rgt[I][J] = W;
+	}
+
+	private boolean isTopFull(int I, int J) {
+		return top[I][J];
+	}
+
+	private boolean isBotFull(int i, int j) {
+		return bot[i][j];
+	}
+
+	private boolean isLftFull(int i, int j) {
+		return lft[i][j];
+	}
+
+	private boolean isRgtFull(int i, int j) {
+		return rgt[i][j];
+	}
+
+	private int getStartI(int i, int j) {
+		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		return edges[i][j].i1;
+	}
+
+	private int getStartJ(int i, int j) {
+		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		return edges[i][j].j1;
+	}
+
+	private int getEndI(int i, int j) {
+		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		return edges[i][j].i2;
+	}
+
+	private int getEndJ(int i, int j) {
+		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		return edges[i][j].j2;
+	}
+
+	private boolean getVis(int i, int j) {
+		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		return edges[i][j].vis;
+	}
+
+	private void setVis(int i, int j, boolean b) {
+		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		edges[i][j].vis = b;
+	}
+
+	private boolean[][] makeBMatrix(int Nx, int Ny, boolean value) {
+		boolean[][] matrix = new boolean[Nx][Ny];
+
+		for (int i = 0; i < Nx; ++i) {
+			for (int j = 0; j < Ny; ++j) {
+				matrix[i][j] = value;
+			}
+		}
+
+		return matrix;
+	}
+
+	private EdgeNode[][] makeEMatrix(int Nx, int Ny) {
+		int i, j;
+		EdgeNode[][] matrix = new EdgeNode[Nx][];
+
+		for (i = 0; i < Nx; ++i) {
+			matrix[i] = new EdgeNode[Ny];
+			for (j = 0; j < Ny; ++j) {
+				matrix[i][j] = new EdgeNode(NIL, NIL, NIL, NIL, true);
+			}
+		}
+
+		return matrix;
+	}
+
+	private double perturbation() {
+		int c = uniformRandom(800001);
+		c -= 400000;
+
+		return ((c) / 899000.0);
+	}
+
+	private void storePnt(Coord P) {
+		if (num_pnts >= max_num_pnts) {
+			max_num_pnts += 1001;
+			pnts = Arrays.copyOf(pnts, max_num_pnts);
+		}
+
+		pnts[num_pnts] = new Coord(P.x, P.y);
+		num_pnts++;
+	}
+
+	private void storeEdge(int i1, int j1, int i2, int j2) {
+		if ((i1 >= 0) && (j1 >= 0) && (i1 <= N_x) && (j1 <= N_y) && (i2 >= 0) && (j2 >= 0) && (i2 <= N_x) && (j2 <= N_y)) {
+			setVis(i1, j1, false);
+			if (edges[i1][j1].i1 == NIL) {
+				assert edges[i1][j1].j1 == NIL;
+				edges[i1][j1].i1 = i2;
+				edges[i1][j1].j1 = j2;
+			} else {
+				assert edges[i1][j1].j1 != NIL;
+				assert edges[i1][j1].i2 == NIL;
+				assert edges[i1][j1].j2 == NIL;
+				edges[i1][j1].i2 = i2;
+				edges[i1][j1].j2 = j2;
+			}
+			setVis(i2, j2, false);
+			if (edges[i2][j2].i1 == NIL) {
+				assert edges[i2][j2].j1 == NIL;
+				edges[i2][j2].i1 = i1;
+				edges[i2][j2].j1 = j1;
+			} else {
+				assert edges[i2][j2].j1 != NIL;
+				assert edges[i2][j2].i2 == NIL;
+				assert edges[i2][j2].j2 == NIL;
+				edges[i2][j2].i2 = i1;
+				edges[i2][j2].j2 = j1;
+			}
+		} else {
+			System.err.println("StoreEdge(): index out of bounds!");
+			System.err.printf("             (%d,%d) <--> (%d,%d)\n", i1, j1, i2, j2);
+		}
+	}
+
+	private void storeVertex(int i1, int j1) {
+		if (num_vertices >= max_num_vertices) {
+			max_num_vertices += 1001;
+			vertices = Arrays.copyOf(vertices, max_num_vertices);
+		}
+		vertices[num_vertices] = new VertexNode(i1, j1);
+		num_vertices++;
+	}
+
+	private boolean isFull(int i, int j) {
+		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
+			return full[i][j];
+		} else {
+			return false;
+		}
+	}
+
+	private boolean isOldFull(int i, int j, int N_x_old, int N_y_old, boolean[][] old_full) {
+		if (i >= 0 && i < N_x_old && j >= 0 && j < N_y_old) {
+			return old_full[i][j];
+		} else {
+			return false;
+		}
+	}
+
+	private boolean isCompletelyFull(int i, int j) {
+		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
+			return (top[i][j] && bot[i][j] && lft[i][j] && rgt[i][j]);
+		} else {
+			return false;
+		}
+	}
+
+	private boolean isCompletelyEmpty(int i, int j) {
+		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
+			return (!(top[i][j] || bot[i][j] || lft[i][j] || rgt[i][j]));
+		} else {
+			return true;
+		}
+	}
+
+	private boolean toBeKept(int i, int j) {
+		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
+			return keep[i][j];
+		} else {
+			return true;
+		}
+	}
+
+	private boolean isPossible(int i, int j) {
+		int c = 0;
+
+		if ((i < 0) || (i >= N_x) || (j < 0) || (j >= N_y)) {
+			return false;
+		}
+
+		if (toBeKept(i, j) || isFull(i, j)) {
+			return false;
+		}
+
+		if (isFull(i - 1, j + 1)) {
+			if (!(isFull(i - 1, j) || isFull(i, j + 1))) {
+				return false;
+			}
+		}
+		if (isFull(i - 1, j - 1)) {
+			if (!(isFull(i - 1, j) || isFull(i, j - 1))) {
+				return false;
+			}
+		}
+		if (isFull(i + 1, j - 1)) {
+			if (!(isFull(i + 1, j) || isFull(i, j - 1))) {
+				return false;
+			}
+		}
+		if (isFull(i + 1, j + 1)) {
+			if (!(isFull(i + 1, j) || isFull(i, j + 1))) {
+				return false;
+			}
+		}
+
+		if (holes) {
+			c = uniformRandom(30);
+		}
+
+		if (c != 0) {
+			if (isFull(i, j - 1) && isFull(i, j + 1)) {
+				if (!(isFull(i + 1, j) || isFull(i - 1, j))) {
+					return false;
+				}
+			}
+			if (isFull(i - 1, j) && isFull(i + 1, j)) {
+				if (!(isFull(i, j - 1) || isFull(i, j + 1))) {
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	private void storeCandidate(int i, int j) {
+		int k;
+
+		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
+			if (!(toBeKept(i, j) && isFull(i, j))) {
+				k = convert(i, j); // NOTE arg change
+				if (num_candidates >= max_num_candidates) {
+					max_num_candidates += 1001;
+					candidates = Arrays.copyOf(candidates, max_num_candidates);
+				}
+				candidates[num_candidates] = k;
+				++num_candidates;
+			}
+		}
+	}
+
+	private void storeKeepCandidate(int i, int j) {
+		int k;
+
+		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
+			if (!(toBeKept(i, j) && isFull(i, j))) {
+				k = convert(i, j);
+				if (num_keep_candidates >= max_num_keep_candidates) {
+					max_num_keep_candidates += 1001;
+					keep_candidates = Arrays.copyOf(keep_candidates, max_num_keep_candidates);
+				}
+				keep_candidates[num_keep_candidates] = k;
+				++num_keep_candidates;
+			}
+		}
+	}
+
+	private void mark(int i, int j, int[] num_cells) { // NOTE C STYLE INPUT int*
+		assert ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y));
+		full[i][j] = true;
+		num_cells[0]++;
+
+		if (i > 0) {
+			storeCandidate(i - 1, j);
+		}
+		if (j > 0) {
+			storeCandidate(i, j - 1);
+		}
+		if (i < (N_x - 1)) {
+			storeCandidate(i + 1, j);
+		}
+		if (j < (N_y - 1)) {
+			storeCandidate(i, j + 1);
+		}
+	}
+
+	private void keep(int i, int j, boolean store_candidates, int[] num_keep) { // NOTE C STYLE INPUT int*
+		if ((i >= 0) && (j >= 0) && (i < N_x) && (j < N_y)) {
+			keep[i][j] = true;
+			num_keep[0]++;
+
+			if (store_candidates) {
+				if (i > 0) {
+					storeKeepCandidate(i - 1, j);
+				}
+				if (j > 0) {
+					storeKeepCandidate(i, j - 1);
+				}
+				if (i < (N_x - 1)) {
+					storeKeepCandidate(i + 1, j);
+				}
+				if (j < (N_y - 1)) {
+					storeKeepCandidate(i, j + 1);
+				}
+			}
+		}
+	}
+
+	int num_pnts = 0, max_num_pnts; // NOTE these are not defined outside method in C version
+
+	private void selectRandomCells(int[] num_cells, int max_cells, int[] num_keep, int max_keep) { // NOTE C-style arg passing int*
+		int k, m, mm, i = 0, j, c = 0;
+
+		while ((num_cells[0] < max_cells) && (num_candidates > 0)) {
+			c = uniformRandom(num_candidates);
+			k = candidates[c];
+			--num_candidates;
+			candidates[c] = candidates[num_candidates];
+			i = k / N_y;
+			j = k - i * N_y;
+			if (isPossible(i, j)) {
+				mark(i, j, num_cells);
+			}
+			if ((num_keep_candidates > 0) && (num_keep[0] < max_keep)) {
+				if ((max_cells - num_cells[0] - 1) > 0) {
+					mm = 1 + 2 * (max_keep - num_keep[0]) / (max_cells - num_cells[0] - 1);
+				} else {
+					mm = 1 + 2 * (max_keep - num_keep[0]);
+				}
+				m = 0;
+				while ((m < mm) && (num_keep_candidates > 0)) {
+					c = uniformRandom(num_keep_candidates);
+					k = keep_candidates[c];
+					--num_keep_candidates;
+					keep_candidates[c] = keep_candidates[num_keep_candidates];
+					i = k / N_y;
+					j = k - i * N_y;
+					if (!isFull(i, j)) {
+						keep(i, j, true, num_keep);
+						++m;
+					}
+				}
+			}
+		}
+	}
+
+	private static class Coord {
+		double x;
+		double y;
+
+		private Coord(double x, double y) {
+			this.x = x;
+			this.y = y;
+		}
+
+	}
+
+	private static class EdgeNode {
+		int i1;
+		int j1;
+		int i2;
+		int j2;
+		boolean vis;
+
+		private EdgeNode(int i1, int j1, int i2, int j2, boolean vis) {
+			this.i1 = i1;
+			this.j1 = j1;
+			this.i2 = i2;
+			this.j2 = j2;
+			this.vis = vis;
+		}
+
+	}
+
+	private static class VertexNode {
+		int i1;
+		int j1;
+
+		private VertexNode(int i1, int j1) {
+			this.i1 = i1;
+			this.j1 = j1;
+		}
+
 	}
 
 }
