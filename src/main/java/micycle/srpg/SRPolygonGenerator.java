@@ -70,11 +70,11 @@ public class SRPolygonGenerator {
 
 	private final RandomGenerator rand;
 
-	Coord[] pnts = new Coord[0];
+	List<Coord> pnts = new ArrayList<>();
 	int[] candidates = new int[0];
 	int[] keepCandidates = new int[0];
 	VertexNode[] vertices = new VertexNode[0];
-	
+
 	int i = 0, j = 0, k, m, n, mm, nn;
 	int maxKeep, maxCells;
 	int numKeep = 0;
@@ -99,7 +99,7 @@ public class SRPolygonGenerator {
 	 * 
 	 * @param Nx           The number of cells in the X direction of the grid.
 	 * @param Ny           The number of cells in the Y direction of the grid.
-	 * @param markPercent The percentage of vertices marked on the grid. The larger
+	 * @param markPercent  The percentage of vertices marked on the grid. The larger
 	 *                     the percentage, the more vertices the polygon tends to
 	 *                     have.
 	 * @param holes        If true, generates a multiply-connected polygonal area.
@@ -483,7 +483,7 @@ public class SRPolygonGenerator {
 		VertexNode zero = new VertexNode(0, 0);
 		Coord p = new Coord(0, 0); // NOTE CHECK
 		pnts = null; // NOTE CHECK
-		Coord[] old_pnts = null; // NOTE CHECK
+		List<Coord> old_pnts = null; // NOTE CHECK
 		num_pnts = 0;
 		max_num_pnts = 0;
 		int old_num_pnts;
@@ -598,7 +598,7 @@ public class SRPolygonGenerator {
 		} else {
 			max_num_pnts = (number - 1) * (smooth + 1) + 2;
 			num_pnts = 0;
-			pnts = new Coord[max_num_pnts]; // NOTE
+			pnts = new ArrayList<>(max_num_pnts);
 			if (perturb) {
 				--number;
 				for (i = 0; i < number; ++i) {
@@ -606,7 +606,7 @@ public class SRPolygonGenerator {
 					p.y = vertices[i].j1 + perturbation();
 					storePnt(p);
 				}
-				storePnt(pnts[0]); // close ring (unperturbed)
+				storePnt(pnts.get(0)); // close ring (unperturbed)
 			} else {
 				p.x = vertices[0].i1; // could just instantiate p
 				p.y = vertices[0].j1;
@@ -627,7 +627,7 @@ public class SRPolygonGenerator {
 					p.x = vertices[i].i1;
 				}
 				storePnt(p);
-				storePnt(pnts[0]); // close ring (with unperturbed coordinate)
+				storePnt(pnts.get(0)); // close ring (with unperturbed coordinate)
 			}
 
 			while (smooth > 0) {
@@ -635,23 +635,23 @@ public class SRPolygonGenerator {
 				old_num_pnts = num_pnts;
 				max_num_pnts *= 2;
 				num_pnts = 0;
-				pnts = new Coord[max_num_pnts];
+				pnts = new ArrayList<>(max_num_pnts);
 				for (i = 1; i < old_num_pnts; ++i) {
-					p.x = (3.0 * old_pnts[i - 1].x + old_pnts[i].x) / 4.0;
-					p.y = (3.0 * old_pnts[i - 1].y + old_pnts[i].y) / 4.0;
+					p.x = (3.0 * old_pnts.get(i - 1).x + old_pnts.get(i).x) / 4.0;
+					p.y = (3.0 * old_pnts.get(i - 1).y + old_pnts.get(i).y) / 4.0;
 					storePnt(p);
-					p.x = (old_pnts[i - 1].x + 3.0 * old_pnts[i].x) / 4.0;
-					p.y = (old_pnts[i - 1].y + 3.0 * old_pnts[i].y) / 4.0;
+					p.x = (old_pnts.get(i - 1).x + 3.0 * old_pnts.get(i).x) / 4.0;
+					p.y = (old_pnts.get(i - 1).y + 3.0 * old_pnts.get(i).y) / 4.0;
 					storePnt(p);
 				}
-				p.x = (3.0 * old_pnts[0].x + old_pnts[1].x) / 4.0;
-				p.y = (3.0 * old_pnts[0].y + old_pnts[1].y) / 4.0;
+				p.x = (3.0 * old_pnts.get(0).x + old_pnts.get(1).x) / 4.0;
+				p.y = (3.0 * old_pnts.get(0).y + old_pnts.get(1).y) / 4.0;
 				storePnt(p);
 				--smooth;
 			}
 
 			for (int l = 0; l < num_pnts; l++) {
-				ring.add(new double[] { pnts[l].x, pnts[l].y });
+				ring.add(new double[] { pnts.get(l).x, pnts.get(l).y });
 			}
 
 			total_number[0] += num_pnts; // *totalNumber += num_pnts;
@@ -775,13 +775,9 @@ public class SRPolygonGenerator {
 	}
 
 	private void storePnt(Coord P) {
-		if (num_pnts >= max_num_pnts) {
-			max_num_pnts += 1001;
-			pnts = Arrays.copyOf(pnts, max_num_pnts);
-		}
-
-		pnts[num_pnts] = new Coord(P.x, P.y);
+//		pnts[num_pnts] = ;
 		num_pnts++;
+		pnts.add(new Coord(P.x, P.y));
 	}
 
 	private void storeEdge(int i1, int j1, int i2, int j2) {
