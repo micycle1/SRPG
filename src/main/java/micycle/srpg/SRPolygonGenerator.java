@@ -39,21 +39,18 @@ public class SRPolygonGenerator {
 
 	private static final int NIL = -1;
 
-	private boolean[][] full = null;
-	private boolean[][] keep = null;
-	private int N = 0;
+	private boolean[][] full;
+	private boolean[][] keep;
 
-	private boolean[][] top = null;
-	private boolean[][] bot = null;
-	private boolean[][] lft = null;
-	private boolean[][] rgt = null;
+	private boolean[][] top;
+	private boolean[][] bot;
+	private boolean[][] lft;
+	private boolean[][] rgt;
 
 	private int numCandidates = 0;
-	private int maxNumCandidates = 0;
 	private int numKeepCandidates = 0;
-	private int maxNumKeepCandidates = 0;
 
-	private EdgeNode[][] edges = null;
+	private EdgeNode[][] edges;
 
 	private int numVertices = 0;
 	private int maxNumVertices = 0;
@@ -70,18 +67,14 @@ public class SRPolygonGenerator {
 
 	private final RandomGenerator rand;
 
-	List<Coord> pnts = new ArrayList<>();
-	int[] candidates = new int[0];
-	int[] keepCandidates = new int[0];
-	VertexNode[] vertices = new VertexNode[0];
+	private List<Coord> pnts = new ArrayList<>();
+	private List<Integer> candidates = new ArrayList<>();
+	private List<Integer> keepCandidates = new ArrayList<>();
+	private VertexNode[] vertices = new VertexNode[0];
 
-	int i = 0, j = 0, k, m, n, mm, nn;
-	int maxKeep, maxCells;
-	int numKeep = 0;
-	int numCells = 0;
-	int totalNumber = 0;
-	double keepPercent;
-	int N_x_old, N_y_old, ii, jj;
+	private int maxKeep, maxCells;
+	private int numKeep = 0;
+	private int numCells = 0;
 
 	/**
 	 * Generates a random polygon based on a grid with Nx times Ny quadratic cells.
@@ -168,35 +161,38 @@ public class SRPolygonGenerator {
 	private List<List<double[]>> compute(double mark_percent, boolean perturb, boolean aligned, int hierarchy, boolean diagonal,
 			int smooth) {
 		// 1. allocate the grid
-		N = N_x * N_y;
+		int N = N_x * N_y;
 		initializeGrid();
 
 		// 2. select cells to be kept
-		keepPercent = (1.0 - mark_percent) * 0.95;
+		final double keepPercent = (1.0 - mark_percent) * 0.95;
 		maxKeep = (int) (N * keepPercent);
 		maxCells = (int) (N * mark_percent);
 
-		m = N_y / 10;
-		for (i = 0; i < N_x; ++i) {
+		int m = N_y / 10;
+		int k;
+		for (int i = 0; i < N_x; ++i) {
 			k = uniformRandom(m);
-			for (j = 0; j <= k; ++j) {
+			for (int j = 0; j <= k; ++j) {
 				keep(i, j, false);
 			}
 			k = uniformRandom(m);
-			for (j = N_y - 1; j >= N_y - k - 1; --j) {
-				keep(i, j, false);
-			}
-		}
-		for (j = 0; j < N_y; ++j) {
-			k = uniformRandom(m);
-			for (i = 0; i <= k; ++i) {
-				keep(i, j, false);
-			}
-			k = uniformRandom(m);
-			for (i = N_x - 1; i >= N_x - k - 1; --i) {
+			for (int j = N_y - 1; j >= N_y - k - 1; --j) {
 				keep(i, j, false);
 			}
 		}
+		for (int j = 0; j < N_y; ++j) {
+			k = uniformRandom(m);
+			for (int i = 0; i <= k; ++i) {
+				keep(i, j, false);
+			}
+			k = uniformRandom(m);
+			for (int i = N_x - 1; i >= N_x - k - 1; --i) {
+				keep(i, j, false);
+			}
+		}
+
+		int i, j, n;
 
 		if (numKeep < maxKeep) {
 			m = (maxKeep - numKeep) / 4;
@@ -213,8 +209,8 @@ public class SRPolygonGenerator {
 		j = uniformRandom(N_y);
 
 		if (numKeep < maxKeep) {
-			for (ii = i - N_x / 30; ii < (i + N_x / 30); ++ii) {
-				for (jj = j - N_y / 30; jj < (j + N_y / 30); ++jj) {
+			for (int ii = i - N_x / 30; ii < (i + N_x / 30); ++ii) {
+				for (int jj = j - N_y / 30; jj < (j + N_y / 30); ++jj) {
 					keep(ii, jj, true);
 					if (numKeep >= maxKeep) {
 						break;
@@ -229,8 +225,8 @@ public class SRPolygonGenerator {
 		// 3. select seed cell(s)
 		m = 7 * N_x / 9;
 		n = 7 * N_y / 9;
-		mm = N_x / 9;
-		nn = N_y / 9;
+		int mm = N_x / 9;
+		int nn = N_y / 9;
 		do {
 			i = uniformRandom(m);
 			j = uniformRandom(n);
@@ -249,8 +245,8 @@ public class SRPolygonGenerator {
 			// 5.1 reset grid data
 			old_full = full;
 			old_keep = keep;
-			N_x_old = N_x;
-			N_y_old = N_y;
+			final int N_x_old = N_x;
+			final int N_y_old = N_y;
 			N_x *= 3;
 			N_y *= 3;
 			N = N_x * N_y;
@@ -260,14 +256,14 @@ public class SRPolygonGenerator {
 			numKeepCandidates = 0;
 			maxKeep = (int) (N * keepPercent);
 			maxCells = (int) (N * mark_percent);
-			numKeep = 0; // =0
+			numKeep = 0;
 			numCells = 0; // =0
 
 			// 5.2 copy data from coarse grid to fine grid
 			for (i = 0; i < N_x_old; ++i) {
 				for (j = 0; j < N_y_old; ++j) {
-					ii = i * 3;
-					jj = j * 3;
+					final int ii = i * 3;
+					final int jj = j * 3;
 					if (isOldFull(i, j, N_x_old, N_y_old, old_full)) {
 						mark(ii + 1, jj + 1);
 						if (isOldFull(i - 1, j, N_x_old, N_y_old, old_full) && isOldFull(i, j - 1, N_x_old, N_y_old, old_full)) {
@@ -470,8 +466,7 @@ public class SRPolygonGenerator {
 		keep = makeBMatrix(N_x, N_y, false);
 	}
 
-	private List<double[]> makePolygon(int i1, int j1, boolean aligned, boolean perturb, int loop_cntr, boolean diagonal,
-			int smooth) {
+	private List<double[]> makePolygon(int i1, int j1, boolean aligned, boolean perturb, int loop_cntr, boolean diagonal, int smooth) {
 		int number = 0, i0, j0;
 		int i2, j2, sum = 0;
 		VertexNode zero = new VertexNode(0, 0);
@@ -479,7 +474,6 @@ public class SRPolygonGenerator {
 		List<Coord> oldPnts;
 
 		assert ((i1 >= 0) && (i1 <= N_x) && (j1 >= 0) && (j1 <= N_y));
-
 
 		// count the number of edges of this loop
 		i0 = i1;
@@ -509,9 +503,9 @@ public class SRPolygonGenerator {
 		storeVertex(i0, j0);
 		number = numVertices - 1;
 
-		i = 0;
-		j = 1;
-		k = 2;
+		int i = 0;
+		int j = 1;
+		int k = 2;
 		while (k < number) {
 			while ((k < number) && (((vertices[i].i1 == vertices[j].i1) && (vertices[i].i1 == vertices[k].i1))
 					|| ((vertices[i].j1 == vertices[j].j1) && (vertices[i].j1 == vertices[k].j1)))) {
@@ -580,7 +574,6 @@ public class SRPolygonGenerator {
 		List<double[]> ring = new ArrayList<>(number);
 
 		if (aligned) {
-			totalNumber += number;
 			for (int l = 0; l < number; l++) {
 				ring.add(new double[] { vertices[l].i1, vertices[l].j1 });
 			}
@@ -619,7 +612,7 @@ public class SRPolygonGenerator {
 
 			while (smooth > 0) {
 				oldPnts = pnts;
-				pnts = new ArrayList<>(oldPnts.size()*2);
+				pnts = new ArrayList<>(oldPnts.size() * 2);
 				for (i = 1; i < oldPnts.size(); ++i) {
 					p.x = (3.0 * oldPnts.get(i - 1).x + oldPnts.get(i).x) / 4.0;
 					p.y = (3.0 * oldPnts.get(i - 1).y + oldPnts.get(i).y) / 4.0;
@@ -637,8 +630,6 @@ public class SRPolygonGenerator {
 			for (int l = 0; l < pnts.size(); l++) {
 				ring.add(new double[] { pnts.get(l).x, pnts.get(l).y });
 			}
-
-			totalNumber += pnts.size();
 		}
 		pnts = null;
 
@@ -901,11 +892,11 @@ public class SRPolygonGenerator {
 		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
 			if (!(toBeKept(i, j) && isFull(i, j))) {
 				k = convert(i, j); // NOTE arg change
-				if (numCandidates >= maxNumCandidates) {
-					maxNumCandidates += 1001;
-					candidates = Arrays.copyOf(candidates, maxNumCandidates);
+				if (numCandidates >= candidates.size()) {
+					candidates.add(k);
+				} else {
+					candidates.set(numCandidates, k);
 				}
-				candidates[numCandidates] = k;
 				++numCandidates;
 			}
 		}
@@ -917,11 +908,11 @@ public class SRPolygonGenerator {
 		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
 			if (!(toBeKept(i, j) && isFull(i, j))) {
 				k = convert(i, j);
-				if (numKeepCandidates >= maxNumKeepCandidates) {
-					maxNumKeepCandidates += 1001;
-					keepCandidates = Arrays.copyOf(keepCandidates, maxNumKeepCandidates);
+				if (numKeepCandidates >= keepCandidates.size()) {
+					keepCandidates.add(k);
+				} else {
+					keepCandidates.set(numKeepCandidates, k);
 				}
-				keepCandidates[numKeepCandidates] = k;
 				++numKeepCandidates;
 			}
 		}
@@ -973,9 +964,10 @@ public class SRPolygonGenerator {
 
 		while ((numCells < maxCells) && (numCandidates > 0)) {
 			c = uniformRandom(numCandidates);
-			k = candidates[c];
+			k = candidates.get(c);
 			--numCandidates;
-			candidates[c] = candidates[numCandidates];
+			candidates.set(c, candidates.get(numCandidates));
+//			candidates[c] = candidates[numCandidates];
 			i = k / N_y;
 			j = k - i * N_y;
 			if (isPossible(i, j)) {
@@ -990,9 +982,9 @@ public class SRPolygonGenerator {
 				m = 0;
 				while ((m < mm) && (numKeepCandidates > 0)) {
 					c = uniformRandom(numKeepCandidates);
-					k = keepCandidates[c];
+					k = keepCandidates.get(c);
 					--numKeepCandidates;
-					keepCandidates[c] = keepCandidates[numKeepCandidates];
+					keepCandidates.set(c, keepCandidates.get(numKeepCandidates));
 					i = k / N_y;
 					j = k - i * N_y;
 					if (!isFull(i, j)) {
