@@ -114,7 +114,7 @@ class TestOutput {
 		var target = parseTestFile(testCaseName);
 		SRPolygonGenerator srpg = new SRPolygonGenerator(Nx, Ny, mark_percent, holes, aligned, perturb, smoothRounds, hierarchy,
 				diagonal, new XSRandom(1337));
-		var actual = srpg.getSRPolygon();
+		var actual = srpg.getPolygon();
 		compare(target, actual);
 	}
 
