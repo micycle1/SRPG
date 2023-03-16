@@ -7,18 +7,18 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * SRPG - Super Random Polygon Generator
+ * SRPolygonGenerator - Super Random Polygon Generator
  * <p>
- * SRPG generates simply-connected and multiply-connected polygons by means of a
+ * SRPolygonGenerator generates simply-connected and multiply-connected polygons by means of a
  * regular grid that consists of square cells. Given two integer values, a and
- * b, SRPG generates a grid of size a times b.
+ * b, SRPolygonGenerator generates a grid of size a times b.
  * <P>
- * By default SRPG then generates orthogonal polygons on this grid. An
+ * By default SRPolygonGenerator then generates orthogonal polygons on this grid. An
  * additional parameter p, between zero and one, leads to a smaller or larger
- * number of vertices in the produced polygon. SRPG is able to produce octagonal
+ * number of vertices in the produced polygon. SRPolygonGenerator is able to produce octagonal
  * polygons by cutting off corners with ±45° diagonals during the construction.
  * Cutting corners repeatedly, without the diagonal restriction, yields an
- * approximation of a smooth free-form curve. Additionally, SRPG can apply
+ * approximation of a smooth free-form curve. Additionally, SRPolygonGenerator can apply
  * perturbations in order to generate polygons with axes-parallel edges whose
  * vertices do not lie on a grid, or to generate polygons whose edges (in
  * general) are not parallel to the coordinate axes.
@@ -31,7 +31,7 @@ import java.util.Random;
  * @author Martin Held (algorithm)
  *
  */
-public class SRPG {
+public class SRPolygonGenerator {
 
 	// https://github.com/cgalab/genpoly-srpg/blob/master/srpg.c
 	// https://sbgdb.cs.sbg.ac.at/classes/polygons/
@@ -1100,7 +1100,7 @@ public class SRPG {
 	 *                     inclination +/-1, thus generating an octagonal polygon.
 	 * @return A random polygon generated based on the input parameters.
 	 */
-	public SRPG(int Nx, int Ny, double mark_percent, long seed, boolean holes, boolean aligned, boolean perturb, int smoothRounds,
+	public SRPolygonGenerator(int Nx, int Ny, double mark_percent, long seed, boolean holes, boolean aligned, boolean perturb, int smoothRounds,
 			int hierarchy, boolean diagonal) {
 
 		if (aligned) {
@@ -1147,7 +1147,7 @@ public class SRPG {
 		state = (int) seed;
 	}
 
-	public List<List<double[]>> compute() {
+	public List<List<double[]>> getSRPolygon() {
 		return Compute(mark_percent, perturb, aligned, hierarchy, diagonal, smooth, file_name);
 	}
 
