@@ -79,12 +79,9 @@ public class SRPolygonGenerator {
 	int maxKeep, maxCells;
 	int numKeep = 0;
 	int numCells = 0;
-	int[] totalNumber = new int[1];
-	int hierarchyCntr = 1;
-	int loopCntr, i1, j1;
+	int totalNumber = 0;
 	double keepPercent;
 	int N_x_old, N_y_old, ii, jj;
-	boolean[][] old_keep, old_full;
 
 	/**
 	 * Generates a random polygon based on a grid with Nx times Ny quadratic cells.
@@ -246,6 +243,8 @@ public class SRPolygonGenerator {
 		selectRandomCells();
 
 		// 5. use current polygon as "seed" for a refinement
+		int hierarchyCntr = 1;
+		boolean[][] old_keep, old_full;
 		while (hierarchyCntr <= hierarchy) {
 			// 5.1 reset grid data
 			old_full = full;
@@ -332,14 +331,9 @@ public class SRPolygonGenerator {
 			hierarchyCntr += 1;
 		}
 
-		/**************************************************************************/
-		/*                                                                        */
-		/* output polygon */
-		/*                                                                        */
-		/**************************************************************************/
-		/*                                                                        */
-		/* determine boundaries between marked and unmarked cells */
-		/*                                                                        */
+		// output polygon
+
+		// determine boundaries between marked and unmarked cells
 		edges = makeEMatrix(N_x + 1, N_y + 1);
 
 		if (diagonal) {
@@ -436,8 +430,8 @@ public class SRPolygonGenerator {
 			}
 		}
 
-		for (i1 = 0; i1 <= N_x; ++i1) {
-			for (j1 = 0; j1 <= N_y; ++j1) {
+		for (int i1 = 0; i1 <= N_x; ++i1) {
+			for (int j1 = 0; j1 <= N_y; ++j1) {
 				if (edges[i1][j1].i1 != NIL) {
 					assert (edges[i1][j1].j1 != NIL);
 					assert (edges[i1][j1].i2 != NIL);
@@ -450,9 +444,9 @@ public class SRPolygonGenerator {
 		}
 
 		List<List<double[]>> rings = new ArrayList<>();
-		loopCntr = 0;
-		for (i1 = 0; i1 <= N_x; ++i1) {
-			for (j1 = 0; j1 <= N_y; ++j1) {
+		int loopCntr = 0;
+		for (int i1 = 0; i1 <= N_x; ++i1) {
+			for (int j1 = 0; j1 <= N_y; ++j1) {
 				if (edges[i1][j1].i1 != NIL) {
 					assert (edges[i1][j1].j1 != NIL);
 					assert (edges[i1][j1].i2 != NIL);
@@ -462,7 +456,7 @@ public class SRPolygonGenerator {
 									&& (edges[edges[i1][j1].i1][edges[i1][j1].j1].j2 == j1)));
 				}
 				if (!getVis(i1, j1)) {
-					rings.add(makePolygon(i1, j1, totalNumber, aligned, perturb, loopCntr, diagonal, smooth));
+					rings.add(makePolygon(i1, j1, aligned, perturb, loopCntr, diagonal, smooth));
 					++loopCntr;
 				}
 			}
@@ -476,23 +470,18 @@ public class SRPolygonGenerator {
 		keep = makeBMatrix(N_x, N_y, false);
 	}
 
-	private List<double[]> makePolygon(int i1, int j1, int[] total_number, boolean aligned, boolean perturb, int loop_cntr,
-			boolean diagonal, int smooth) {
+	private List<double[]> makePolygon(int i1, int j1, boolean aligned, boolean perturb, int loop_cntr, boolean diagonal,
+			int smooth) {
 		int number = 0, i0, j0;
-		int i, j, k, i2, j2, sum = 0;
+		int i2, j2, sum = 0;
 		VertexNode zero = new VertexNode(0, 0);
-		Coord p = new Coord(0, 0); // NOTE CHECK
-		pnts = null; // NOTE CHECK
-		List<Coord> old_pnts = null; // NOTE CHECK
-		num_pnts = 0;
-		max_num_pnts = 0;
-		int old_num_pnts;
+		Coord p = new Coord(0, 0);
+		List<Coord> oldPnts;
 
 		assert ((i1 >= 0) && (i1 <= N_x) && (j1 >= 0) && (j1 <= N_y));
 
-		/*                                                                        */
-		/* count the number of edges of this loop */
-		/*                                                                        */
+
+		// count the number of edges of this loop
 		i0 = i1;
 		j0 = j1;
 		numVertices = 0;
@@ -591,14 +580,12 @@ public class SRPolygonGenerator {
 		List<double[]> ring = new ArrayList<>(number);
 
 		if (aligned) {
-			total_number[0] += number; // *totalNumber += number;
+			totalNumber += number;
 			for (int l = 0; l < number; l++) {
 				ring.add(new double[] { vertices[l].i1, vertices[l].j1 });
 			}
 		} else {
-			max_num_pnts = (number - 1) * (smooth + 1) + 2;
-			num_pnts = 0;
-			pnts = new ArrayList<>(max_num_pnts);
+			pnts = new ArrayList<>((number - 1) * (smooth + 1) + 2);
 			if (perturb) {
 				--number;
 				for (i = 0; i < number; ++i) {
@@ -631,30 +618,27 @@ public class SRPolygonGenerator {
 			}
 
 			while (smooth > 0) {
-				old_pnts = pnts;
-				old_num_pnts = num_pnts;
-				max_num_pnts *= 2;
-				num_pnts = 0;
-				pnts = new ArrayList<>(max_num_pnts);
-				for (i = 1; i < old_num_pnts; ++i) {
-					p.x = (3.0 * old_pnts.get(i - 1).x + old_pnts.get(i).x) / 4.0;
-					p.y = (3.0 * old_pnts.get(i - 1).y + old_pnts.get(i).y) / 4.0;
+				oldPnts = pnts;
+				pnts = new ArrayList<>(oldPnts.size()*2);
+				for (i = 1; i < oldPnts.size(); ++i) {
+					p.x = (3.0 * oldPnts.get(i - 1).x + oldPnts.get(i).x) / 4.0;
+					p.y = (3.0 * oldPnts.get(i - 1).y + oldPnts.get(i).y) / 4.0;
 					storePnt(p);
-					p.x = (old_pnts.get(i - 1).x + 3.0 * old_pnts.get(i).x) / 4.0;
-					p.y = (old_pnts.get(i - 1).y + 3.0 * old_pnts.get(i).y) / 4.0;
+					p.x = (oldPnts.get(i - 1).x + 3.0 * oldPnts.get(i).x) / 4.0;
+					p.y = (oldPnts.get(i - 1).y + 3.0 * oldPnts.get(i).y) / 4.0;
 					storePnt(p);
 				}
-				p.x = (3.0 * old_pnts.get(0).x + old_pnts.get(1).x) / 4.0;
-				p.y = (3.0 * old_pnts.get(0).y + old_pnts.get(1).y) / 4.0;
+				p.x = (3.0 * oldPnts.get(0).x + oldPnts.get(1).x) / 4.0;
+				p.y = (3.0 * oldPnts.get(0).y + oldPnts.get(1).y) / 4.0;
 				storePnt(p);
 				--smooth;
 			}
 
-			for (int l = 0; l < num_pnts; l++) {
+			for (int l = 0; l < pnts.size(); l++) {
 				ring.add(new double[] { pnts.get(l).x, pnts.get(l).y });
 			}
 
-			total_number[0] += num_pnts; // *totalNumber += num_pnts;
+			totalNumber += pnts.size();
 		}
 		pnts = null;
 
@@ -775,8 +759,6 @@ public class SRPolygonGenerator {
 	}
 
 	private void storePnt(Coord P) {
-//		pnts[num_pnts] = ;
-		num_pnts++;
 		pnts.add(new Coord(P.x, P.y));
 	}
 
@@ -986,9 +968,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	int num_pnts = 0, max_num_pnts; // NOTE these are not defined outside method in C version
-
-	private void selectRandomCells() { // NOTE C-style arg passing int*
+	private void selectRandomCells() {
 		int k, m, mm, i = 0, j, c = 0;
 
 		while ((numCells < maxCells) && (numCandidates > 0)) {
