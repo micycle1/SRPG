@@ -1041,7 +1041,7 @@ public class SRPG {
 			}
 		}
 
-//		System.out.format("\n%s edges generated within %d loops\n", total_number[0] - loop_cntr, loop_cntr);
+		System.out.format("\n%s edges generated within %d loops\n", total_number[0] - loop_cntr, loop_cntr);
 		return rings;
 	}
 
