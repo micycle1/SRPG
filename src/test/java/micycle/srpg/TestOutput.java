@@ -91,6 +91,20 @@ class TestOutput {
 		boolean diagonal = false;
 		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
 	}
+	
+	@Test
+	void testBigGrid() {
+		int nX = 100;
+		int nY = 100;
+		double markPercent = 0.5;
+		boolean holes = true; // NOTE
+		boolean aligned = false;
+		boolean perturb = true;
+		int smooth = 2;
+		int hierarchy = 0;
+		boolean diagonal = true;
+		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
+	}
 
 	void runCase(int Nx, int Ny, double mark_percent, boolean holes, boolean aligned, boolean perturb, int smoothRounds,
 			int hierarchy, boolean diagonal) {
