@@ -55,8 +55,8 @@ public class SRPolygonGenerator {
 	private int numVertices = 0;
 	private int maxNumVertices = 0;
 
-	private int N_x;
-	private int N_y;
+	private int nX;
+	private int nY;
 	private boolean perturb;
 	private boolean aligned;
 	private boolean diagonal;
@@ -136,8 +136,8 @@ public class SRPolygonGenerator {
 			this.aligned = true;
 		}
 
-		this.N_x = Nx;
-		this.N_y = Ny;
+		this.nX = Nx;
+		this.nY = Ny;
 		this.markPercent = mark_percent;
 		this.holes = holes;
 		this.aligned = aligned;
@@ -154,40 +154,39 @@ public class SRPolygonGenerator {
 	 * @return a random polygon generated based on the input parameters
 	 */
 	public List<List<double[]>> getPolygon() {
-		return compute(markPercent, perturb, aligned, hierarchy, diagonal, smooth);
+		return compute();
 	}
 
 	// generates the polygon
-	private List<List<double[]>> compute(double mark_percent, boolean perturb, boolean aligned, int hierarchy, boolean diagonal,
-			int smooth) {
+	private List<List<double[]>> compute() {
 		// 1. allocate the grid
-		int N = N_x * N_y;
+		int N = nX * nY;
 		initializeGrid();
 
 		// 2. select cells to be kept
-		final double keepPercent = (1.0 - mark_percent) * 0.95;
+		final double keepPercent = (1.0 - markPercent) * 0.95;
 		maxKeep = (int) (N * keepPercent);
-		maxCells = (int) (N * mark_percent);
+		maxCells = (int) (N * markPercent);
 
-		int m = N_y / 10;
+		int m = nY / 10;
 		int k;
-		for (int i = 0; i < N_x; ++i) {
+		for (int i = 0; i < nX; ++i) {
 			k = uniformRandom(m);
 			for (int j = 0; j <= k; ++j) {
 				keep(i, j, false);
 			}
 			k = uniformRandom(m);
-			for (int j = N_y - 1; j >= N_y - k - 1; --j) {
+			for (int j = nY - 1; j >= nY - k - 1; --j) {
 				keep(i, j, false);
 			}
 		}
-		for (int j = 0; j < N_y; ++j) {
+		for (int j = 0; j < nY; ++j) {
 			k = uniformRandom(m);
 			for (int i = 0; i <= k; ++i) {
 				keep(i, j, false);
 			}
 			k = uniformRandom(m);
-			for (int i = N_x - 1; i >= N_x - k - 1; --i) {
+			for (int i = nX - 1; i >= nX - k - 1; --i) {
 				keep(i, j, false);
 			}
 		}
@@ -199,18 +198,18 @@ public class SRPolygonGenerator {
 			n = 0;
 			for (n = 0; n < m; ++n) {
 				k = uniformRandom(N);
-				i = k / N_y;
-				j = k - i * N_y;
+				i = k / nY;
+				j = k - i * nY;
 				keep(i, j, true);
 			}
 		}
 
-		i = uniformRandom(N_x);
-		j = uniformRandom(N_y);
+		i = uniformRandom(nX);
+		j = uniformRandom(nY);
 
 		if (numKeep < maxKeep) {
-			for (int ii = i - N_x / 30; ii < (i + N_x / 30); ++ii) {
-				for (int jj = j - N_y / 30; jj < (j + N_y / 30); ++jj) {
+			for (int ii = i - nX / 30; ii < (i + nX / 30); ++ii) {
+				for (int jj = j - nY / 30; jj < (j + nY / 30); ++jj) {
 					keep(ii, jj, true);
 					if (numKeep >= maxKeep) {
 						break;
@@ -223,10 +222,10 @@ public class SRPolygonGenerator {
 		}
 
 		// 3. select seed cell(s)
-		m = 7 * N_x / 9;
-		n = 7 * N_y / 9;
-		int mm = N_x / 9;
-		int nn = N_y / 9;
+		m = 7 * nX / 9;
+		n = 7 * nY / 9;
+		final int mm = nX / 9;
+		final int nn = nY / 9;
 		do {
 			i = uniformRandom(m);
 			j = uniformRandom(n);
@@ -240,22 +239,21 @@ public class SRPolygonGenerator {
 
 		// 5. use current polygon as "seed" for a refinement
 		int hierarchyCntr = 1;
-		boolean[][] old_keep, old_full;
+		boolean[][] old_full;
 		while (hierarchyCntr <= hierarchy) {
 			// 5.1 reset grid data
 			old_full = full;
-			old_keep = keep;
-			final int N_x_old = N_x;
-			final int N_y_old = N_y;
-			N_x *= 3;
-			N_y *= 3;
-			N = N_x * N_y;
+			final int N_x_old = nX;
+			final int N_y_old = nY;
+			nX *= 3;
+			nY *= 3;
+			N = nX * nY;
 
 			initializeGrid();
 			numCandidates = 0;
 			numKeepCandidates = 0;
 			maxKeep = (int) (N * keepPercent);
-			maxCells = (int) (N * mark_percent);
+			maxCells = (int) (N * markPercent);
 			numKeep = 0;
 			numCells = 0; // =0
 
@@ -330,15 +328,15 @@ public class SRPolygonGenerator {
 		// output polygon
 
 		// determine boundaries between marked and unmarked cells
-		edges = makeEMatrix(N_x + 1, N_y + 1);
+		edges = makeEMatrix(nX + 1, nY + 1);
 
 		if (diagonal) {
-			top = makeBMatrix(N_x, N_y, false);
-			bot = makeBMatrix(N_x, N_y, false);
-			lft = makeBMatrix(N_x, N_y, false);
-			rgt = makeBMatrix(N_x, N_y, false);
-			for (i = 0; i < N_x; ++i) {
-				for (j = 0; j < N_y; ++j) {
+			top = makeBMatrix(nX, nY, false);
+			bot = makeBMatrix(nX, nY, false);
+			lft = makeBMatrix(nX, nY, false);
+			rgt = makeBMatrix(nX, nY, false);
+			for (i = 0; i < nX; ++i) {
+				for (j = 0; j < nY; ++j) {
 					if (isFull(i, j)) {
 						setBot(i, j, true);
 						setTop(i, j, true);
@@ -347,8 +345,8 @@ public class SRPolygonGenerator {
 					}
 				}
 			}
-			for (i = 0; i <= N_x; ++i) {
-				for (j = 0; j <= N_y; ++j) {
+			for (i = 0; i <= nX; ++i) {
+				for (j = 0; j <= nY; ++j) {
 					if (isCompletelyFull(i, j)) {
 						if (isFull(i - 1, j) && isFull(i - 1, j + 1) && isFull(i, j + 1) && isCompletelyEmpty(i, j - 1)
 								&& isCompletelyEmpty(i + 1, j)) {
@@ -370,8 +368,8 @@ public class SRPolygonGenerator {
 					}
 				}
 			}
-			for (i = 0; i <= N_x; ++i) {
-				for (j = 0; j <= N_y; ++j) {
+			for (i = 0; i <= nX; ++i) {
+				for (j = 0; j <= nY; ++j) {
 					if (isCompletelyFull(i, j)) {
 						if (isCompletelyEmpty(i, j - 1)) {
 							storeEdge(i, j, i + 1, j);
@@ -405,8 +403,8 @@ public class SRPolygonGenerator {
 				}
 			}
 		} else {
-			for (i = 0; i <= N_x; ++i) {
-				for (j = 0; j <= N_y; ++j) {
+			for (i = 0; i <= nX; ++i) {
+				for (j = 0; j <= nY; ++j) {
 					if (isFull(i, j)) {
 						if (!isFull(i, j - 1)) {
 							storeEdge(i, j, i + 1, j);
@@ -426,8 +424,8 @@ public class SRPolygonGenerator {
 			}
 		}
 
-		for (int i1 = 0; i1 <= N_x; ++i1) {
-			for (int j1 = 0; j1 <= N_y; ++j1) {
+		for (int i1 = 0; i1 <= nX; ++i1) {
+			for (int j1 = 0; j1 <= nY; ++j1) {
 				if (edges[i1][j1].i1 != NIL) {
 					assert (edges[i1][j1].j1 != NIL);
 					assert (edges[i1][j1].i2 != NIL);
@@ -441,8 +439,8 @@ public class SRPolygonGenerator {
 
 		List<List<double[]>> rings = new ArrayList<>();
 		int loopCntr = 0;
-		for (int i1 = 0; i1 <= N_x; ++i1) {
-			for (int j1 = 0; j1 <= N_y; ++j1) {
+		for (int i1 = 0; i1 <= nX; ++i1) {
+			for (int j1 = 0; j1 <= nY; ++j1) {
 				if (edges[i1][j1].i1 != NIL) {
 					assert (edges[i1][j1].j1 != NIL);
 					assert (edges[i1][j1].i2 != NIL);
@@ -462,8 +460,8 @@ public class SRPolygonGenerator {
 	}
 
 	private void initializeGrid() {
-		full = makeBMatrix(N_x, N_y, false);
-		keep = makeBMatrix(N_x, N_y, false);
+		full = makeBMatrix(nX, nY, false);
+		keep = makeBMatrix(nX, nY, false);
 	}
 
 	private List<double[]> makePolygon(int i1, int j1, boolean aligned, boolean perturb, int loop_cntr, boolean diagonal, int smooth) {
@@ -473,7 +471,7 @@ public class SRPolygonGenerator {
 		Coord p = new Coord(0, 0);
 		List<Coord> oldPnts;
 
-		assert ((i1 >= 0) && (i1 <= N_x) && (j1 >= 0) && (j1 <= N_y));
+		assert ((i1 >= 0) && (i1 <= nX) && (j1 >= 0) && (j1 <= nY));
 
 		// count the number of edges of this loop
 		i0 = i1;
@@ -485,7 +483,7 @@ public class SRPolygonGenerator {
 			setVis(i1, j1, true);
 			i2 = getStartI(i1, j1);
 			j2 = getStartJ(i1, j1);
-			assert ((i2 >= 0) && (i2 <= N_x) && (j2 >= 0) && (j2 <= N_y));
+			assert ((i2 >= 0) && (i2 <= nX) && (j2 >= 0) && (j2 <= nY));
 			if (getVis(i2, j2)) {
 				i2 = getEndI(i1, j1);
 				j2 = getEndJ(i1, j1);
@@ -493,7 +491,7 @@ public class SRPolygonGenerator {
 					i2 = i0;
 					j2 = j0;
 				}
-				assert ((i2 >= 0) && (i2 <= N_x) && (j2 >= 0) && (j2 <= N_y));
+				assert ((i2 >= 0) && (i2 <= nX) && (j2 >= 0) && (j2 <= nY));
 			}
 			i1 = i2;
 			j1 = j2;
@@ -636,14 +634,12 @@ public class SRPolygonGenerator {
 		return ring;
 	}
 
-	private int uniformRandom(int m) {
-
-		return rand.nextInt() % m;
-//		return rand.nextInt(m);
+	private int uniformRandom(final int m) {
+		return rand.nextInt(m);
 	}
 
-	private int convert(int i, int j) {
-		return i * N_y + j;
+	private int convert(final int i, final int j) {
+		return i * nY + j;
 	}
 
 	private static double det2D(VertexNode u, VertexNode v, VertexNode w) {
@@ -651,22 +647,22 @@ public class SRPolygonGenerator {
 	}
 
 	private void setTop(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		top[I][J] = W;
 	}
 
 	private void setBot(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		bot[I][J] = W;
 	}
 
 	private void setLft(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		lft[I][J] = W;
 	}
 
 	private void setRgt(int I, int J, boolean W) {
-		assert (I >= 0 && I < N_x && J >= 0 && J < N_y);
+		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		rgt[I][J] = W;
 	}
 
@@ -687,32 +683,32 @@ public class SRPolygonGenerator {
 	}
 
 	private int getStartI(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].i1;
 	}
 
 	private int getStartJ(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].j1;
 	}
 
 	private int getEndI(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].i2;
 	}
 
 	private int getEndJ(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].j2;
 	}
 
 	private boolean getVis(int i, int j) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].vis;
 	}
 
 	private void setVis(int i, int j, boolean b) {
-		assert (i >= 0 && i <= N_x && j >= 0 && j <= N_y);
+		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		edges[i][j].vis = b;
 	}
 
@@ -743,10 +739,8 @@ public class SRPolygonGenerator {
 	}
 
 	private double perturbation() {
-		int c = uniformRandom(800001);
-		c -= 400000;
-
-		return ((c) / 899000.0);
+		final double max = 400 / 899d;
+		return rand.nextDouble(-max, max);
 	}
 
 	private void storePnt(Coord P) {
@@ -754,7 +748,7 @@ public class SRPolygonGenerator {
 	}
 
 	private void storeEdge(int i1, int j1, int i2, int j2) {
-		if ((i1 >= 0) && (j1 >= 0) && (i1 <= N_x) && (j1 <= N_y) && (i2 >= 0) && (j2 >= 0) && (i2 <= N_x) && (j2 <= N_y)) {
+		if ((i1 >= 0) && (j1 >= 0) && (i1 <= nX) && (j1 <= nY) && (i2 >= 0) && (j2 >= 0) && (i2 <= nX) && (j2 <= nY)) {
 			setVis(i1, j1, false);
 			if (edges[i1][j1].i1 == NIL) {
 				assert edges[i1][j1].j1 == NIL;
@@ -781,21 +775,21 @@ public class SRPolygonGenerator {
 			}
 		} else {
 			System.err.println("StoreEdge(): index out of bounds!");
-			System.err.printf("             (%d,%d) <--> (%d,%d)\n", i1, j1, i2, j2);
+			System.err.printf("(%d,%d) <--> (%d,%d)%n", i1, j1, i2, j2);
 		}
 	}
 
 	private void storeVertex(int i1, int j1) {
 		if (numVertices >= maxNumVertices) {
-			maxNumVertices += 1001;
+			maxNumVertices += 500;
 			vertices = Arrays.copyOf(vertices, maxNumVertices);
 		}
 		vertices[numVertices] = new VertexNode(i1, j1);
 		numVertices++;
 	}
 
-	private boolean isFull(int i, int j) {
-		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
+	private boolean isFull(final int i, final int j) {
+		if (i >= 0 && i < nX && j >= 0 && j < nY) {
 			return full[i][j];
 		} else {
 			return false;
@@ -811,7 +805,7 @@ public class SRPolygonGenerator {
 	}
 
 	private boolean isCompletelyFull(int i, int j) {
-		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
+		if (i >= 0 && i < nX && j >= 0 && j < nY) {
 			return (top[i][j] && bot[i][j] && lft[i][j] && rgt[i][j]);
 		} else {
 			return false;
@@ -819,15 +813,15 @@ public class SRPolygonGenerator {
 	}
 
 	private boolean isCompletelyEmpty(int i, int j) {
-		if (i >= 0 && i < N_x && j >= 0 && j < N_y) {
+		if (i >= 0 && i < nX && j >= 0 && j < nY) {
 			return (!(top[i][j] || bot[i][j] || lft[i][j] || rgt[i][j]));
 		} else {
 			return true;
 		}
 	}
 
-	private boolean toBeKept(int i, int j) {
-		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
+	private boolean toBeKept(final int i, final int j) {
+		if ((i >= 0) && (i < nX) && (j >= 0) && (j < nY)) {
 			return keep[i][j];
 		} else {
 			return true;
@@ -837,7 +831,7 @@ public class SRPolygonGenerator {
 	private boolean isPossible(int i, int j) {
 		int c = 0;
 
-		if ((i < 0) || (i >= N_x) || (j < 0) || (j >= N_y)) {
+		if ((i < 0) || (i >= nX) || (j < 0) || (j >= nY)) {
 			return false;
 		}
 
@@ -889,23 +883,23 @@ public class SRPolygonGenerator {
 	private void storeCandidate(int i, int j) {
 		int k;
 
-		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
+		if ((i >= 0) && (i < nX) && (j >= 0) && (j < nY)) {
 			if (!(toBeKept(i, j) && isFull(i, j))) {
-				k = convert(i, j); // NOTE arg change
+				k = convert(i, j);
 				if (numCandidates >= candidates.size()) {
 					candidates.add(k);
 				} else {
 					candidates.set(numCandidates, k);
 				}
-				++numCandidates;
+				numCandidates++;
 			}
 		}
 	}
 
-	private void storeKeepCandidate(int i, int j) {
+	private void storeKeepCandidate(final int i, final int j) {
 		int k;
 
-		if ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y)) {
+		if ((i >= 0) && (i < nX) && (j >= 0) && (j < nY)) {
 			if (!(toBeKept(i, j) && isFull(i, j))) {
 				k = convert(i, j);
 				if (numKeepCandidates >= keepCandidates.size()) {
@@ -913,13 +907,13 @@ public class SRPolygonGenerator {
 				} else {
 					keepCandidates.set(numKeepCandidates, k);
 				}
-				++numKeepCandidates;
+				numKeepCandidates++;
 			}
 		}
 	}
 
-	private void mark(int i, int j) { // NOTE C STYLE INPUT int*
-		assert ((i >= 0) && (i < N_x) && (j >= 0) && (j < N_y));
+	private void mark(int i, int j) {
+		assert ((i >= 0) && (i < nX) && (j >= 0) && (j < nY));
 		full[i][j] = true;
 		numCells++;
 
@@ -929,30 +923,30 @@ public class SRPolygonGenerator {
 		if (j > 0) {
 			storeCandidate(i, j - 1);
 		}
-		if (i < (N_x - 1)) {
+		if (i < (nX - 1)) {
 			storeCandidate(i + 1, j);
 		}
-		if (j < (N_y - 1)) {
+		if (j < (nY - 1)) {
 			storeCandidate(i, j + 1);
 		}
 	}
 
-	private void keep(int i, int j, boolean store_candidates) { // NOTE C STYLE INPUT int*
-		if ((i >= 0) && (j >= 0) && (i < N_x) && (j < N_y)) {
+	private void keep(final int i, final int j, final boolean storeCandidates) {
+		if ((i >= 0) && (j >= 0) && (i < nX) && (j < nY)) {
 			keep[i][j] = true;
 			numKeep++;
 
-			if (store_candidates) {
+			if (storeCandidates) {
 				if (i > 0) {
 					storeKeepCandidate(i - 1, j);
 				}
 				if (j > 0) {
 					storeKeepCandidate(i, j - 1);
 				}
-				if (i < (N_x - 1)) {
+				if (i < (nX - 1)) {
 					storeKeepCandidate(i + 1, j);
 				}
-				if (j < (N_y - 1)) {
+				if (j < (nY - 1)) {
 					storeKeepCandidate(i, j + 1);
 				}
 			}
@@ -967,9 +961,8 @@ public class SRPolygonGenerator {
 			k = candidates.get(c);
 			--numCandidates;
 			candidates.set(c, candidates.get(numCandidates));
-//			candidates[c] = candidates[numCandidates];
-			i = k / N_y;
-			j = k - i * N_y;
+			i = k / nY;
+			j = k - i * nY;
 			if (isPossible(i, j)) {
 				mark(i, j);
 			}
@@ -985,8 +978,8 @@ public class SRPolygonGenerator {
 					k = keepCandidates.get(c);
 					--numKeepCandidates;
 					keepCandidates.set(c, keepCandidates.get(numKeepCandidates));
-					i = k / N_y;
-					j = k - i * N_y;
+					i = k / nY;
+					j = k - i * nY;
 					if (!isFull(i, j)) {
 						keep(i, j, true);
 						++m;
