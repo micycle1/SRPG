@@ -3,38 +3,35 @@ package micycle.srpg;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 /**
  * SRPG - Super Random Polygon Generator
  * <p>
- * SRPG generates simply-connected and multiply-connected polygons by means of a
- * regular grid that consists of square cells. Given two integer values, a and
- * b, SRPolygonGenerator generates a grid of size a times b.
+ * SRPG generates well-formed random polygons by means of a regular grid that
+ * consists of square cells.
  * <P>
- * By default SRPolygonGenerator then generates orthogonal polygons on this
- * grid. An additional parameter p, between zero and one, leads to a smaller or
- * larger number of vertices in the produced polygon. SRPolygonGenerator is able
- * to produce octagonal polygons by cutting off corners with ±45° diagonals
- * during the construction. Cutting corners repeatedly, without the diagonal
+ * By default SRPG then generates orthogonal polygons on this grid. An
+ * additional parameter <i>markPercent</i>, between zero and one, leads to a
+ * smaller or larger number of vertices in the produced polygon. SRPG is able to
+ * produce octagonal polygons by cutting off corners with ±45° diagonals during
+ * the construction. Cutting corners repeatedly, without the diagonal
  * restriction, yields an approximation of a smooth free-form curve.
- * Additionally, SRPolygonGenerator can apply perturbations in order to generate
- * polygons with axes-parallel edges whose vertices do not lie on a grid, or to
- * generate polygons whose edges (in general) are not parallel to the coordinate
- * axes.
- * <p>
- * See
- * https://www1.pub.informatik.uni-wuerzburg.de/eurocg2020/data/uploads/papers/eurocg20_paper_75.pdf
- * for more info.
+ * Additionally, SRPG can apply perturbations in order to generate polygons with
+ * axes-parallel edges whose vertices do not lie on a grid, or to generate
+ * polygons whose edges (in general) are not parallel to the coordinate axes.
  * 
  * @author Michael Carleton (Java implementation)
  * @author Martin Held (algorithm)
+ * @see <a href=
+ *      "https://www1.pub.informatik.uni-wuerzburg.de/eurocg2020/data/uploads/papers/eurocg20_paper_75.pdf">On
+ *      Generating Polygons (Paper)</a>
  *
  */
 public class SRPolygonGenerator {
 
-	// https://github.com/cgalab/genpoly-micycle.srpg/blob/master/micycle.srpg.c
-	// https://sbgdb.cs.sbg.ac.at/classes/polygons/
+	// https://sbgdb.cs.sbg.ac.at/generators/genpoly-srpg/
+	// https://github.com/cgalab/genpoly-srpg
 	// https://www1.pub.informatik.uni-wuerzburg.de/eurocg2020/data/uploads/papers/eurocg20_paper_75.pdf
 
 	private static final int NIL = -1;
@@ -65,7 +62,7 @@ public class SRPolygonGenerator {
 	private double markPercent = 0.5;
 	private boolean holes = false;
 
-	private final RandomGenerator rand;
+	private final Random rand;
 
 	private List<Coord> pnts = new ArrayList<>();
 	private final List<Integer> candidates = new ArrayList<>();
@@ -77,38 +74,40 @@ public class SRPolygonGenerator {
 	private int numCells = 0;
 
 	/**
-	 * Generates a random polygon based on a grid with Nx times Ny quadratic cells.
-	 * The number of vertices of the polygon generated is random, but it does depend
-	 * on Nx, Ny and the percentage markPercent: The larger Nx and Ny, the more
-	 * vertices the polygon tends to have for a given markPercent.
+	 * Generates a random polygon based on a grid with nX times nY quadratic cells.
+	 * <p>
+	 * The number of vertices of the polygon generated is random, but depends on
+	 * <code>nX</code>, <code>nY</code> and the percentage <code>markPercent</code>:
+	 * The larger nX and nY, the more vertices the polygon tends to have for a given
+	 * markPercent.
 	 * <p>
 	 * Visually pleasing "random" polygons can be achieved by selecting fairly small
-	 * values for markPercent, e.g., markPercent:=0.1 or even markPercent:=0.01.
-	 * (However, a small value of markPercent will also reduce the number of
-	 * vertices of the polygon.)
+	 * values for markPercent, e.g., <code>markPercent=0.1</code> or even
+	 * <code>markPercent=0.01</code>.
 	 * 
-	 * @param Nx           The number of cells in the X direction of the grid.
-	 * @param Ny           The number of cells in the Y direction of the grid.
-	 * @param markPercent  The percentage of vertices marked on the grid. The larger
-	 *                     the percentage, the more vertices the polygon tends to
-	 *                     have.
-	 * @param holes        If true, generates a multiply-connected polygonal area.
-	 * @param aligned      If true, all vertices will lie on grid points.
-	 * @param perturb      If true, the vertices are moved away from the grid points
-	 *                     and (most) polygon edges will not be parallel to the
-	 *                     coordinate axes.
-	 * @param smoothRounds The number of rounds of corner cutting (Chaikin) to apply
-	 *                     to the polygon generated. A small positive integer value
-	 *                     is recommended. A value of 3 is probably sufficient.
-	 * @param hierarchy    The number of rounds of recursive refinement to apply to
-	 *                     the polygon generated. A small positive integer value is
-	 *                     recommended. This is akin to increasing the depth of
-	 *                     fractal curve.
-	 * @param diagonal     If true, cuts off some corners by line segments with
-	 *                     inclination +/-1, thus generating an octagonal polygon.
+	 * @param nX          The number of cells in the X direction of the grid.
+	 * @param nY          The number of cells in the Y direction of the grid.
+	 * @param markPercent The percentage of vertices marked on the grid. The larger
+	 *                    the percentage, the more vertices the polygon tends to
+	 *                    have.
+	 * @param holes       If true, generates a multiply-connected polygonal area.
+	 * @param aligned     If true, all vertices will lie on integer grid points.
+	 * @param perturb     If true, the vertices are moved away from the grid points
+	 *                    and (most) polygon edges will not be parallel to the
+	 *                    coordinate axes.
+	 * @param smoothing   The number of rounds of corner cutting to apply to the
+	 *                    polygon. A small positive integer value is recommended. A
+	 *                    value of 3 is probably sufficient.
+	 * @param hierarchy   The number of rounds of recursive refinement to apply to
+	 *                    the polygon generated. A small positive integer value is
+	 *                    recommended. This is akin to increasing the depth of
+	 *                    fractal curve.
+	 * @param diagonal    If true, cuts off some corners by line segments with
+	 *                    inclination +/-1, thus generating an octagonal polygon.
+	 * @param rand        User-provided random number generator.
 	 */
-	public SRPolygonGenerator(int Nx, int Ny, double mark_percent, final boolean holes, boolean aligned, boolean perturb, int smoothRounds,
-			int hierarchy, final boolean diagonal, final RandomGenerator rand) {
+	public SRPolygonGenerator(int nX, int nY, double markPercent, boolean holes, boolean aligned, boolean perturb, int smoothing,
+			int hierarchy, final boolean diagonal, final Random rand) {
 
 		if (aligned) {
 			perturb = false;
@@ -118,31 +117,31 @@ public class SRPolygonGenerator {
 		if (hierarchy < 0) {
 			hierarchy = 0;
 		}
-		if (smoothRounds < 0) {
-			smoothRounds = 0;
+		if (smoothing < 0) {
+			smoothing = 0;
 		}
-		if (Nx < 3) {
-			Nx = 3;
+		if (nX < 3) {
+			nX = 3;
 		}
-		if (Ny < 3) {
-			Ny = 3;
+		if (nY < 3) {
+			nY = 3;
 		}
-		if (mark_percent < 0.0001) {
-			mark_percent = 0.0001;
-		} else if (mark_percent > 0.5) {
-			mark_percent = 0.5;
+		if (markPercent < 0.0001) {
+			markPercent = 0.0001;
+		} else if (markPercent > 0.5) {
+			markPercent = 0.5;
 		}
 		if (diagonal && !perturb) {
 			this.aligned = true;
 		}
 
-		this.nX = Nx;
-		this.nY = Ny;
-		this.markPercent = mark_percent;
+		this.nX = nX;
+		this.nY = nY;
+		this.markPercent = markPercent;
 		this.holes = holes;
 		this.aligned = aligned;
 		this.perturb = perturb;
-		this.smooth = smoothRounds;
+		this.smooth = smoothing;
 		this.hierarchy = hierarchy;
 		this.diagonal = diagonal;
 
@@ -150,8 +149,11 @@ public class SRPolygonGenerator {
 	}
 
 	/**
+	 * Computes and returns the polygon.
 	 * 
-	 * @return a random polygon generated based on the input parameters
+	 * @return a list of polygon rings. Rings consists of a closed loop of
+	 *         coordinate pairs. The first ring represents the polygon exterior. Any
+	 *         subsequent rings represent polygon holes.
 	 */
 	public List<List<double[]>> getPolygon() {
 		return compute();
@@ -398,7 +400,7 @@ public class SRPolygonGenerator {
 							storeEdge(i, j, i + 1, j + 1);
 						}
 					} else {
-						System.err.format("cell[%s,%s]: neither top nor bottom is full!%n", i, j);
+						System.err.format("Cell[%s,%s]: neither top nor bottom is full!%n", i, j);
 					}
 				}
 			}
@@ -562,7 +564,8 @@ public class SRPolygonGenerator {
 			i = 1;
 			j = number - 2;
 			while (i < j) {
-				zero = vertices[i]; // swap
+				// swap i and j
+				zero = vertices[i];
 				vertices[i] = vertices[j];
 				vertices[j] = zero;
 				++i;
@@ -570,11 +573,11 @@ public class SRPolygonGenerator {
 			}
 		}
 
-		final List<double[]> ring = new ArrayList<>(number);
+		final List<double[]> ring = new ArrayList<>(number); // single polygon ring (exterior or hole)
 
 		if (aligned) {
-			for (int l = 0; l < number; l++) {
-				ring.add(new double[] { vertices[l].i1, vertices[l].j1 });
+			for (int n = 0; n < number; n++) {
+				ring.add(new double[] { vertices[n].i1, vertices[n].j1 });
 			}
 		} else {
 			pnts = new ArrayList<>((number - 1) * (smooth + 1) + 2);
@@ -583,12 +586,12 @@ public class SRPolygonGenerator {
 				for (i = 0; i < number; ++i) {
 					p.x = vertices[i].i1 + perturbation();
 					p.y = vertices[i].j1 + perturbation();
-					storePnt(p);
+					storePoint(p);
 				}
 			} else {
 				p.x = vertices[0].i1; // could just instantiate p
 				p.y = vertices[0].j1;
-				storePnt(p);
+				storePoint(p);
 				number -= 2;
 				for (i = 1; i < number; ++i) {
 					if (vertices[i].i1 == vertices[i - 1].i1) {
@@ -596,7 +599,7 @@ public class SRPolygonGenerator {
 					} else {
 						p.x = vertices[i].i1 + perturbation();
 					}
-					storePnt(p);
+					storePoint(p);
 				}
 				i = number;
 				if (vertices[i].i1 == vertices[i - 1].i1) {
@@ -604,9 +607,9 @@ public class SRPolygonGenerator {
 				} else {
 					p.x = vertices[i].i1;
 				}
-				storePnt(p);
+				storePoint(p);
 			}
-			storePnt(pnts.get(0)); // close ring (unperturbed)
+			storePoint(pnts.get(0)); // close ring
 
 			while (smooth > 0) {
 				oldPnts = pnts;
@@ -614,14 +617,14 @@ public class SRPolygonGenerator {
 				for (i = 1; i < oldPnts.size(); ++i) {
 					p.x = (3.0 * oldPnts.get(i - 1).x + oldPnts.get(i).x) / 4.0;
 					p.y = (3.0 * oldPnts.get(i - 1).y + oldPnts.get(i).y) / 4.0;
-					storePnt(p);
+					storePoint(p);
 					p.x = (oldPnts.get(i - 1).x + 3.0 * oldPnts.get(i).x) / 4.0;
 					p.y = (oldPnts.get(i - 1).y + 3.0 * oldPnts.get(i).y) / 4.0;
-					storePnt(p);
+					storePoint(p);
 				}
 				p.x = (3.0 * oldPnts.get(0).x + oldPnts.get(1).x) / 4.0;
 				p.y = (3.0 * oldPnts.get(0).y + oldPnts.get(1).y) / 4.0;
-				storePnt(p);
+				storePoint(p);
 				--smooth;
 			}
 
@@ -629,7 +632,7 @@ public class SRPolygonGenerator {
 				ring.add(new double[] { pnts.get(l).x, pnts.get(l).y });
 			}
 		}
-		pnts = null;
+		pnts.clear();
 
 		return ring;
 	}
@@ -739,11 +742,10 @@ public class SRPolygonGenerator {
 	}
 
 	private double perturbation() {
-		final double max = 400 / 899d;
-		return rand.nextDouble(-max, max);
+		return (rand.nextInt(801) - 400) / 899.0; // -0.4449...0.4449
 	}
 
-	private void storePnt(final Coord P) {
+	private void storePoint(final Coord P) {
 		pnts.add(new Coord(P.x, P.y));
 	}
 
@@ -796,9 +798,9 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private boolean isOldFull(final int i, final int j, final int N_x_old, final int N_y_old, final boolean[][] old_full) {
-		if (i >= 0 && i < N_x_old && j >= 0 && j < N_y_old) {
-			return old_full[i][j];
+	private boolean isOldFull(final int i, final int j, final int oldNX, final int oldNY, final boolean[][] oldFull) {
+		if (i >= 0 && i < oldNX && j >= 0 && j < oldNY) {
+			return oldFull[i][j];
 		} else {
 			return false;
 		}
@@ -829,8 +831,6 @@ public class SRPolygonGenerator {
 	}
 
 	private boolean isPossible(final int i, final int j) {
-		int c = 0;
-
 		if ((i < 0) || (i >= nX) || (j < 0) || (j >= nY)) {
 			return false;
 		}
@@ -860,7 +860,8 @@ public class SRPolygonGenerator {
 			}
 		}
 
-		if (holes) {
+		int c = 0;
+		if (!holes) { // NOTE boolean inverted (unlike original impl, which seems to be incorrect)
 			c = uniformRandom(30);
 		}
 
