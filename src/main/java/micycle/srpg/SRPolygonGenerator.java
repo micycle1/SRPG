@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+
 /**
  * SRPG - Super Random Polygon Generator
  * <p>
@@ -36,22 +38,6 @@ public class SRPolygonGenerator {
 
 	private static final int NIL = -1;
 
-	private boolean[][] full;
-	private boolean[][] keep;
-
-	private boolean[][] top;
-	private boolean[][] bot;
-	private boolean[][] lft;
-	private boolean[][] rgt;
-
-	private int numCandidates = 0;
-	private int numKeepCandidates = 0;
-
-	private EdgeNode[][] edges;
-
-	private int numVertices = 0;
-	private int maxNumVertices = 0;
-
 	private int nX;
 	private int nY;
 	private final boolean perturb;
@@ -62,16 +48,32 @@ public class SRPolygonGenerator {
 	private double markPercent = 0.5;
 	private boolean holes = false;
 
-	private final Random rand;
+	private boolean[][] full;
+	private boolean[][] keep;
 
-	private List<Coord> pnts = new ArrayList<>();
-	private final List<Integer> candidates = new ArrayList<>();
-	private final List<Integer> keepCandidates = new ArrayList<>();
-	private VertexNode[] vertices = new VertexNode[0];
+	private boolean[][] top;
+	private boolean[][] bot;
+	private boolean[][] lft;
+	private boolean[][] rgt;
+
+	private int numCandidates = 0;
+	private int numKeepCandidates = 0;
+	private final IntArrayList candidates = new IntArrayList();
+	private final IntArrayList keepCandidates = new IntArrayList();
+
+	private EdgeNode[][] edges;
+
+	private int numVertices = 0;
+	private int maxNumVertices = 500;
+	private VertexNode[] vertices = new VertexNode[maxNumVertices];
 
 	private int maxKeep, maxCells;
 	private int numKeep = 0;
 	private int numCells = 0;
+
+	private final Random rand;
+
+	private List<Point> pnts = new ArrayList<>();
 
 	/**
 	 * Generates a random polygon based on a grid with nX times nY quadratic cells.
@@ -89,7 +91,7 @@ public class SRPolygonGenerator {
 	 * @param nY          The number of cells in the Y direction of the grid.
 	 * @param markPercent The percentage of vertices marked on the grid. The larger
 	 *                    the percentage, the more vertices the polygon tends to
-	 *                    have.
+	 *                    have. Should generally be between 0...0.5.
 	 * @param holes       If true, generates a multiply-connected polygonal area.
 	 * @param aligned     If true, all vertices will lie on integer grid points.
 	 * @param perturb     If true, the vertices are moved away from the grid points
@@ -128,8 +130,6 @@ public class SRPolygonGenerator {
 		}
 		if (markPercent < 0.0001) {
 			markPercent = 0.0001;
-		} else if (markPercent > 0.5) {
-			markPercent = 0.5;
 		}
 		if (diagonal && !perturb) {
 			this.aligned = true;
@@ -171,6 +171,9 @@ public class SRPolygonGenerator {
 		maxCells = (int) (N * markPercent);
 
 		int m = nY / 10;
+		if (m ==0) {
+			m=1;
+		}
 		int k;
 		for (int i = 0; i < nX; ++i) {
 			k = uniformRandom(m);
@@ -471,8 +474,8 @@ public class SRPolygonGenerator {
 		int number = 0, i0, j0;
 		int i2, j2, sum = 0;
 		VertexNode zero = new VertexNode(0, 0);
-		final Coord p = new Coord(0, 0);
-		List<Coord> oldPnts;
+		final Point p = new Point(0, 0);
+		List<Point> oldPnts;
 
 		assert ((i1 >= 0) && (i1 <= nX) && (j1 >= 0) && (j1 <= nY));
 
@@ -745,8 +748,8 @@ public class SRPolygonGenerator {
 		return (rand.nextInt(801) - 400) / 899.0; // -0.4449...0.4449
 	}
 
-	private void storePoint(final Coord P) {
-		pnts.add(new Coord(P.x, P.y));
+	private void storePoint(final Point p) {
+		pnts.add(new Point(p.x, p.y));
 	}
 
 	private void storeEdge(final int i1, final int j1, final int i2, final int j2) {
@@ -783,7 +786,7 @@ public class SRPolygonGenerator {
 
 	private void storeVertex(final int i1, final int j1) {
 		if (numVertices >= maxNumVertices) {
-			maxNumVertices += 500;
+			maxNumVertices *= 1.5;
 			vertices = Arrays.copyOf(vertices, maxNumVertices);
 		}
 		vertices[numVertices] = new VertexNode(i1, j1);
@@ -959,9 +962,9 @@ public class SRPolygonGenerator {
 
 		while ((numCells < maxCells) && (numCandidates > 0)) {
 			c = uniformRandom(numCandidates);
-			k = candidates.get(c);
+			k = candidates.getInt(c);
 			--numCandidates;
-			candidates.set(c, candidates.get(numCandidates));
+			candidates.set(c, candidates.getInt(numCandidates));
 			i = k / nY;
 			j = k - i * nY;
 			if (isPossible(i, j)) {
@@ -976,9 +979,9 @@ public class SRPolygonGenerator {
 				m = 0;
 				while ((m < mm) && (numKeepCandidates > 0)) {
 					c = uniformRandom(numKeepCandidates);
-					k = keepCandidates.get(c);
+					k = keepCandidates.getInt(c);
 					--numKeepCandidates;
-					keepCandidates.set(c, keepCandidates.get(numKeepCandidates));
+					keepCandidates.set(c, keepCandidates.getInt(numKeepCandidates));
 					i = k / nY;
 					j = k - i * nY;
 					if (!isFull(i, j)) {
@@ -990,11 +993,11 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private static class Coord {
+	private static class Point {
 		double x;
 		double y;
 
-		private Coord(final double x, final double y) {
+		private Point(final double x, final double y) {
 			this.x = x;
 			this.y = y;
 		}
