@@ -57,9 +57,9 @@ public class SRPolygonGenerator {
 
 	private int nX;
 	private int nY;
-	private boolean perturb;
+	private final boolean perturb;
 	private boolean aligned;
-	private boolean diagonal;
+	private final boolean diagonal;
 	private int hierarchy = 0;
 	private int smooth = 0;
 	private double markPercent = 0.5;
@@ -68,8 +68,8 @@ public class SRPolygonGenerator {
 	private final RandomGenerator rand;
 
 	private List<Coord> pnts = new ArrayList<>();
-	private List<Integer> candidates = new ArrayList<>();
-	private List<Integer> keepCandidates = new ArrayList<>();
+	private final List<Integer> candidates = new ArrayList<>();
+	private final List<Integer> keepCandidates = new ArrayList<>();
 	private VertexNode[] vertices = new VertexNode[0];
 
 	private int maxKeep, maxCells;
@@ -107,8 +107,8 @@ public class SRPolygonGenerator {
 	 * @param diagonal     If true, cuts off some corners by line segments with
 	 *                     inclination +/-1, thus generating an octagonal polygon.
 	 */
-	public SRPolygonGenerator(int Nx, int Ny, double mark_percent, boolean holes, boolean aligned, boolean perturb, int smoothRounds,
-			int hierarchy, boolean diagonal, RandomGenerator rand) {
+	public SRPolygonGenerator(int Nx, int Ny, double mark_percent, final boolean holes, boolean aligned, boolean perturb, int smoothRounds,
+			int hierarchy, final boolean diagonal, final RandomGenerator rand) {
 
 		if (aligned) {
 			perturb = false;
@@ -437,7 +437,7 @@ public class SRPolygonGenerator {
 			}
 		}
 
-		List<List<double[]>> rings = new ArrayList<>();
+		final List<List<double[]>> rings = new ArrayList<>();
 		int loopCntr = 0;
 		for (int i1 = 0; i1 <= nX; ++i1) {
 			for (int j1 = 0; j1 <= nY; ++j1) {
@@ -464,11 +464,12 @@ public class SRPolygonGenerator {
 		keep = makeBMatrix(nX, nY, false);
 	}
 
-	private List<double[]> makePolygon(int i1, int j1, boolean aligned, boolean perturb, int loop_cntr, boolean diagonal, int smooth) {
+	private List<double[]> makePolygon(int i1, int j1, final boolean aligned, final boolean perturb, final int loop_cntr,
+			final boolean diagonal, int smooth) {
 		int number = 0, i0, j0;
 		int i2, j2, sum = 0;
 		VertexNode zero = new VertexNode(0, 0);
-		Coord p = new Coord(0, 0);
+		final Coord p = new Coord(0, 0);
 		List<Coord> oldPnts;
 
 		assert ((i1 >= 0) && (i1 <= nX) && (j1 >= 0) && (j1 <= nY));
@@ -569,7 +570,7 @@ public class SRPolygonGenerator {
 			}
 		}
 
-		List<double[]> ring = new ArrayList<>(number);
+		final List<double[]> ring = new ArrayList<>(number);
 
 		if (aligned) {
 			for (int l = 0; l < number; l++) {
@@ -584,7 +585,6 @@ public class SRPolygonGenerator {
 					p.y = vertices[i].j1 + perturbation();
 					storePnt(p);
 				}
-				storePnt(pnts.get(0)); // close ring (unperturbed)
 			} else {
 				p.x = vertices[0].i1; // could just instantiate p
 				p.y = vertices[0].j1;
@@ -605,8 +605,8 @@ public class SRPolygonGenerator {
 					p.x = vertices[i].i1;
 				}
 				storePnt(p);
-				storePnt(pnts.get(0)); // close ring (with unperturbed coordinate)
 			}
+			storePnt(pnts.get(0)); // close ring (unperturbed)
 
 			while (smooth > 0) {
 				oldPnts = pnts;
@@ -642,78 +642,78 @@ public class SRPolygonGenerator {
 		return i * nY + j;
 	}
 
-	private static double det2D(VertexNode u, VertexNode v, VertexNode w) {
+	private static double det2D(final VertexNode u, final VertexNode v, final VertexNode w) {
 		return (((u).i1 - (v).i1) * ((v).j1 - (w).j1) + ((v).j1 - (u).j1) * ((v).i1 - (w).i1));
 	}
 
-	private void setTop(int I, int J, boolean W) {
+	private void setTop(final int I, final int J, final boolean W) {
 		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		top[I][J] = W;
 	}
 
-	private void setBot(int I, int J, boolean W) {
+	private void setBot(final int I, final int J, final boolean W) {
 		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		bot[I][J] = W;
 	}
 
-	private void setLft(int I, int J, boolean W) {
+	private void setLft(final int I, final int J, final boolean W) {
 		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		lft[I][J] = W;
 	}
 
-	private void setRgt(int I, int J, boolean W) {
+	private void setRgt(final int I, final int J, final boolean W) {
 		assert (I >= 0 && I < nX && J >= 0 && J < nY);
 		rgt[I][J] = W;
 	}
 
-	private boolean isTopFull(int I, int J) {
+	private boolean isTopFull(final int I, final int J) {
 		return top[I][J];
 	}
 
-	private boolean isBotFull(int i, int j) {
+	private boolean isBotFull(final int i, final int j) {
 		return bot[i][j];
 	}
 
-	private boolean isLftFull(int i, int j) {
+	private boolean isLftFull(final int i, final int j) {
 		return lft[i][j];
 	}
 
-	private boolean isRgtFull(int i, int j) {
+	private boolean isRgtFull(final int i, final int j) {
 		return rgt[i][j];
 	}
 
-	private int getStartI(int i, int j) {
+	private int getStartI(final int i, final int j) {
 		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].i1;
 	}
 
-	private int getStartJ(int i, int j) {
+	private int getStartJ(final int i, final int j) {
 		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].j1;
 	}
 
-	private int getEndI(int i, int j) {
+	private int getEndI(final int i, final int j) {
 		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].i2;
 	}
 
-	private int getEndJ(int i, int j) {
+	private int getEndJ(final int i, final int j) {
 		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].j2;
 	}
 
-	private boolean getVis(int i, int j) {
+	private boolean getVis(final int i, final int j) {
 		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		return edges[i][j].vis;
 	}
 
-	private void setVis(int i, int j, boolean b) {
+	private void setVis(final int i, final int j, final boolean b) {
 		assert (i >= 0 && i <= nX && j >= 0 && j <= nY);
 		edges[i][j].vis = b;
 	}
 
-	private boolean[][] makeBMatrix(int Nx, int Ny, boolean value) {
-		boolean[][] matrix = new boolean[Nx][Ny];
+	private boolean[][] makeBMatrix(final int Nx, final int Ny, final boolean value) {
+		final boolean[][] matrix = new boolean[Nx][Ny];
 
 		for (int i = 0; i < Nx; ++i) {
 			for (int j = 0; j < Ny; ++j) {
@@ -724,9 +724,9 @@ public class SRPolygonGenerator {
 		return matrix;
 	}
 
-	private EdgeNode[][] makeEMatrix(int Nx, int Ny) {
+	private EdgeNode[][] makeEMatrix(final int Nx, final int Ny) {
 		int i, j;
-		EdgeNode[][] matrix = new EdgeNode[Nx][];
+		final EdgeNode[][] matrix = new EdgeNode[Nx][];
 
 		for (i = 0; i < Nx; ++i) {
 			matrix[i] = new EdgeNode[Ny];
@@ -743,11 +743,11 @@ public class SRPolygonGenerator {
 		return rand.nextDouble(-max, max);
 	}
 
-	private void storePnt(Coord P) {
+	private void storePnt(final Coord P) {
 		pnts.add(new Coord(P.x, P.y));
 	}
 
-	private void storeEdge(int i1, int j1, int i2, int j2) {
+	private void storeEdge(final int i1, final int j1, final int i2, final int j2) {
 		if ((i1 >= 0) && (j1 >= 0) && (i1 <= nX) && (j1 <= nY) && (i2 >= 0) && (j2 >= 0) && (i2 <= nX) && (j2 <= nY)) {
 			setVis(i1, j1, false);
 			if (edges[i1][j1].i1 == NIL) {
@@ -779,7 +779,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private void storeVertex(int i1, int j1) {
+	private void storeVertex(final int i1, final int j1) {
 		if (numVertices >= maxNumVertices) {
 			maxNumVertices += 500;
 			vertices = Arrays.copyOf(vertices, maxNumVertices);
@@ -796,7 +796,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private boolean isOldFull(int i, int j, int N_x_old, int N_y_old, boolean[][] old_full) {
+	private boolean isOldFull(final int i, final int j, final int N_x_old, final int N_y_old, final boolean[][] old_full) {
 		if (i >= 0 && i < N_x_old && j >= 0 && j < N_y_old) {
 			return old_full[i][j];
 		} else {
@@ -804,7 +804,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private boolean isCompletelyFull(int i, int j) {
+	private boolean isCompletelyFull(final int i, final int j) {
 		if (i >= 0 && i < nX && j >= 0 && j < nY) {
 			return (top[i][j] && bot[i][j] && lft[i][j] && rgt[i][j]);
 		} else {
@@ -812,7 +812,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private boolean isCompletelyEmpty(int i, int j) {
+	private boolean isCompletelyEmpty(final int i, final int j) {
 		if (i >= 0 && i < nX && j >= 0 && j < nY) {
 			return (!(top[i][j] || bot[i][j] || lft[i][j] || rgt[i][j]));
 		} else {
@@ -828,7 +828,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private boolean isPossible(int i, int j) {
+	private boolean isPossible(final int i, final int j) {
 		int c = 0;
 
 		if ((i < 0) || (i >= nX) || (j < 0) || (j >= nY)) {
@@ -880,7 +880,7 @@ public class SRPolygonGenerator {
 		return true;
 	}
 
-	private void storeCandidate(int i, int j) {
+	private void storeCandidate(final int i, final int j) {
 		int k;
 
 		if ((i >= 0) && (i < nX) && (j >= 0) && (j < nY)) {
@@ -912,7 +912,7 @@ public class SRPolygonGenerator {
 		}
 	}
 
-	private void mark(int i, int j) {
+	private void mark(final int i, final int j) {
 		assert ((i >= 0) && (i < nX) && (j >= 0) && (j < nY));
 		full[i][j] = true;
 		numCells++;
@@ -993,7 +993,7 @@ public class SRPolygonGenerator {
 		double x;
 		double y;
 
-		private Coord(double x, double y) {
+		private Coord(final double x, final double y) {
 			this.x = x;
 			this.y = y;
 		}
@@ -1007,7 +1007,7 @@ public class SRPolygonGenerator {
 		int j2;
 		boolean vis;
 
-		private EdgeNode(int i1, int j1, int i2, int j2, boolean vis) {
+		private EdgeNode(final int i1, final int j1, final int i2, final int j2, final boolean vis) {
 			this.i1 = i1;
 			this.j1 = j1;
 			this.i2 = i2;
@@ -1021,7 +1021,7 @@ public class SRPolygonGenerator {
 		int i1;
 		int j1;
 
-		private VertexNode(int i1, int j1) {
+		private VertexNode(final int i1, final int j1) {
 			this.i1 = i1;
 			this.j1 = j1;
 		}

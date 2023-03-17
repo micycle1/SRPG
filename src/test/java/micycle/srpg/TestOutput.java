@@ -49,7 +49,7 @@ class TestOutput {
 		boolean diagonal = false;
 		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
 	}
-	
+
 	@Test
 	void testOrthogonal() {
 		int nX = 12;
@@ -63,7 +63,7 @@ class TestOutput {
 		boolean diagonal = false;
 		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
 	}
-	
+
 	@Test
 	void testAlignedOrthogonal() {
 		int nX = 10;
@@ -77,7 +77,7 @@ class TestOutput {
 		boolean diagonal = false;
 		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
 	}
-	
+
 	@Test
 	void testSmooth() {
 		int nX = 10;
@@ -91,7 +91,7 @@ class TestOutput {
 		boolean diagonal = false;
 		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
 	}
-	
+
 	@Test
 	void testBigGrid() {
 		int nX = 100;
@@ -106,14 +106,14 @@ class TestOutput {
 		runCase(nX, nY, markPercent, holes, aligned, perturb, smooth, hierarchy, diagonal);
 	}
 
-	void runCase(int Nx, int Ny, double mark_percent, boolean holes, boolean aligned, boolean perturb, int smoothRounds,
-			int hierarchy, boolean diagonal) {
+	void runCase(int Nx, int Ny, double mark_percent, boolean holes, boolean aligned, boolean perturb, int smoothRounds, int hierarchy,
+			boolean diagonal) {
 		String testCaseName = "%s,%s,%s,%s,%s,%s,%s,%s,%s".formatted(Nx, Ny, mark_percent, holes ? "t" : "f", aligned ? "t" : "f",
 				perturb ? "t" : "f", smoothRounds, hierarchy, diagonal ? "t" : "f");
 
 		var target = parseTestFile(testCaseName);
-		SRPolygonGenerator srpg = new SRPolygonGenerator(Nx, Ny, mark_percent, holes, aligned, perturb, smoothRounds, hierarchy,
-				diagonal, new XSRandom(1337));
+		SRPolygonGenerator srpg = new SRPolygonGenerator(Nx, Ny, mark_percent, holes, aligned, perturb, smoothRounds, hierarchy, diagonal,
+				new XSRandom(1337));
 		var actual = srpg.getPolygon();
 		compare(target, actual);
 	}
@@ -123,7 +123,8 @@ class TestOutput {
 		for (int i = 0; i < target.size(); i++) {
 			List<double[]> targetRing = target.get(i);
 			List<double[]> actualRing = actual.get(i);
-			assertEquals(targetRing.size(), actualRing.size(), "Ring #%s vertex number mismatch.".formatted(i)); // compare number of points in the rings
+			assertEquals(targetRing.size(), actualRing.size(), "Ring #%s vertex number mismatch.".formatted(i)); // compare number of points
+																													// in the rings
 			for (int j = 0; j < targetRing.size(); j++) {
 				double[] targetPoint = targetRing.get(j);
 				double[] actualPoint = actualRing.get(j);
@@ -136,7 +137,7 @@ class TestOutput {
 	 * @return list polygon vertex rings provided by a given test file
 	 */
 	private static List<List<double[]>> parseTestFile(String name) {
-		name+=".txt";
+		name += ".txt";
 		Path filePath = Paths.get("src", "test", "resources", name);
 		List<String> lines;
 		try {
@@ -193,6 +194,21 @@ class TestOutput {
 		@Override
 		public int nextInt() {
 			return (int) (Math.abs(nextLong()) % 2147483647);
+		}
+
+		@Override
+		public int nextInt(int bound) {
+			return nextInt() % bound;
+		}
+
+		@Override
+		public int nextInt(int origin, int bound) {
+			return origin + nextInt(bound - origin);
+		}
+
+		@Override
+		public double nextDouble(double origin, double bound) {
+			return nextInt(-400000, 400001) / 899000d;
 		}
 	}
 
