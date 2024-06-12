@@ -2,9 +2,9 @@
 
 # SRPG – Super Random Polygon Generator
 
-SRPG is a library that generates well-formed random polygons using a regular grid consisting of square cells. 
+SRPG is a library that generates well-formed random polygons using a regular grid consisting of square cells.
 
-By default, SRPG generates orthogonal polygons on this grid. However, it can also produce octagonal polygons by cutting off corners with ±45° diagonals during the construction. Repeatedly cutting corners without the diagonal restriction yields an approximation of a smooth free-form curve. Moreover, SRPG can apply perturbations to generate polygons with axes-parallel edges whose vertices do not lie on a grid or generate polygons whose edges are not parallel to the coordinate axes.
+It starts with axis & grid-aligned basic rectangular shapes, but can systematically manipulate them through repeated corner-cutting and perturbations to create a variety of polygonal and curve-like shapes, both on the grid and with offset/rotated orientations.
 
 This library is based on *Martin Held*'s C [implementation](https://github.com/cgalab/genpoly-srpg).
 
